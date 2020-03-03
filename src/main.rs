@@ -85,10 +85,6 @@ fn main() {
             .value_name("N")
             .help("Minimum size of wordlists fragments (default 4)")
             .takes_value(true))
-        .arg(Arg::with_name("debug")
-            .long("debug")
-            .help("Undocumented debug commands")
-            .takes_value(false))
         .get_matches();
 
     let allrules = rules::genmutate();
