@@ -873,6 +873,14 @@ pub fn show_rules(rules: &[Rule]) -> String {
     o
 }
 
+pub fn show_commands(rules: &[CommandRule]) -> String {
+    let mut o = String::new();
+    for rule in rules {
+        o += show_command(rule).as_str();
+    }
+    o
+}
+
 pub fn genmutate() -> Vec<Rule> {
     use CharClass::*;
     use CharSelector::*;
