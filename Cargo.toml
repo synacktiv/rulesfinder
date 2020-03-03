@@ -1,0 +1,10 @@
+[package]
+name = "johnrules"
+version = "0.1.0"
+authors = ["Simon Marechal <simon.marechal@synacktiv.com>"]
+edition = "2018"
+
+[dependencies]
+clap = "2.33.0"
+crossbeam = "0.7.3"
+indicatif = "0.14.0"
