@@ -1,44 +1,46 @@
-
+use indicatif::ProgressBar;
+use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::{self, BufRead};
-use std::collections::{HashSet, HashMap};
-use indicatif::{ProgressBar};
 
 pub fn process_line(
-    out : &mut HashMap<Vec<u8>, Vec<(Vec<u8>, Vec<u8>, u64)>>,
+    out: &mut HashMap<Vec<u8>, Vec<(Vec<u8>, Vec<u8>, u64)>>,
     nth: u64,
     line: &Vec<u8>,
-    minsize: usize
-    ) -> usize {
+    minsize: usize,
+) -> usize {
     let ln = line.len();
     let mut inserted = 0;
-    for start in 0 .. 1 + ln - minsize {
+    for start in 0..1 + ln - minsize {
         let maxwidth = 1 + ln - start;
-        for sz in minsize .. maxwidth {
-            let middle = line[start .. start+sz].to_vec();
+        for sz in minsize..maxwidth {
+            let middle = line[start..start + sz].to_vec();
             inserted += 1;
             out.entry(middle)
-                .and_modify(|x : &mut Vec<(Vec<u8>, Vec<u8>, u64)>| {
-                    let lstart = line[0 .. start].to_vec();
-                    let ending = line[start+sz ..].to_vec();
-                    x.push( (lstart, ending, nth) );
+                .and_modify(|x: &mut Vec<(Vec<u8>, Vec<u8>, u64)>| {
+                    let lstart = line[0..start].to_vec();
+                    let ending = line[start + sz..].to_vec();
+                    x.push((lstart, ending, nth));
                 })
                 .or_insert({
-                    let lstart = line[0 .. start].to_vec();
-                    let ending = line[start+sz ..].to_vec();
+                    let lstart = line[0..start].to_vec();
+                    let ending = line[start + sz..].to_vec();
                     vec![(lstart, ending, nth)]
                 });
-            }
+        }
     }
     return inserted;
 }
 
 // returns a map with all the fragments, and a hashset with all the lines
-pub fn process(path: &str, minsize: usize, known: &HashSet<&Vec<u8>>) ->
-    io::Result<(
-        HashMap<Vec<u8>, Vec<(Vec<u8>, Vec<u8>, u64)>>,
-        HashMap<u64, Vec<u8>>
-        ) > {
+pub fn process(
+    path: &str,
+    minsize: usize,
+    known: &HashSet<&Vec<u8>>,
+) -> io::Result<(
+    HashMap<Vec<u8>, Vec<(Vec<u8>, Vec<u8>, u64)>>,
+    HashMap<u64, Vec<u8>>,
+)> {
     let mut idx = HashMap::new();
 
     let file = File::open(path)?;
@@ -55,7 +57,7 @@ pub fn process(path: &str, minsize: usize, known: &HashSet<&Vec<u8>>) ->
         }
         idx.insert(i, line);
         i += 1;
-        for l in minsize..llen+1 {
+        for l in minsize..llen + 1 {
             expected_size += llen + 1 - l;
         }
     }
@@ -65,8 +67,9 @@ pub fn process(path: &str, minsize: usize, known: &HashSet<&Vec<u8>>) ->
     // compared to what's inside the map ...
     let mut out = HashMap::with_capacity(expected_size * 7 / 10);
     let bar = ProgressBar::new(i);
-    bar.set_style(indicatif::ProgressStyle::default_bar()
-        .template("[ETA: {eta_precise}] {bar:60.cyan/blue} {pos}/{len} - {msg} fragments inserted"));
+    bar.set_style(indicatif::ProgressStyle::default_bar().template(
+        "[ETA: {eta_precise}] {bar:60.cyan/blue} {pos}/{len} - {msg} fragments inserted",
+    ));
     i = 0;
     for (k, line) in &idx {
         inserted += process_line(&mut out, *k, &line, minsize);
@@ -89,7 +92,7 @@ mod tests {
     fn test1() {
         let mut out = HashMap::new();
         let inserted = process_line(&mut out, 0, &"ABCDEF".as_bytes().to_vec(), 3);
-        let expected : &[(&str, (&str, &str))] = &[
+        let expected: &[(&str, (&str, &str))] = &[
             ("ABCDEF", ("", "")),
             ("ABCDE", ("", "F")),
             ("ABCD", ("", "EF")),
@@ -102,7 +105,7 @@ mod tests {
             ("DEF", ("ABC", "")),
         ];
         for (k, tpl) in expected {
-            let kv : Vec<u8> = k.as_bytes().to_vec();
+            let kv: Vec<u8> = k.as_bytes().to_vec();
             match out.get(&kv) {
                 None => panic!("Could not find match {}", k),
                 Some(_) => {}

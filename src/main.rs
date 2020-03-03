@@ -1,28 +1,28 @@
 extern crate clap;
 extern crate crossbeam;
 
-use clap::{Arg, App};
+use clap::{App, Arg};
+use indicatif::ProgressBar;
+use std::collections::BTreeSet;
+use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::{self, BufRead};
-use std::collections::BTreeSet;
 use std::iter::FromIterator;
-use std::collections::{HashSet, HashMap};
-use std::thread;
 use std::str;
 use std::sync::Arc;
-use indicatif::ProgressBar;
+use std::thread;
 
-mod rules;
 mod cleartexts;
 mod matcher;
+mod rules;
 
 fn worker_thread(
-    r : crossbeam::channel::Receiver<Vec<rules::Rule>>,
-    s : crossbeam::channel::Sender<HashMap<Vec<rules::Rule>, BTreeSet<u64>>>,
-    alines : Arc<Vec<Vec<u8>>>,
-    aclear : Arc<HashMap<Vec<u8>, Vec<(Vec<u8>, Vec<u8>, u64)>>>,
-    cutoff: usize) {
-
+    r: crossbeam::channel::Receiver<Vec<rules::Rule>>,
+    s: crossbeam::channel::Sender<HashMap<Vec<rules::Rule>, BTreeSet<u64>>>,
+    alines: Arc<Vec<Vec<u8>>>,
+    aclear: Arc<HashMap<Vec<u8>, Vec<(Vec<u8>, Vec<u8>, u64)>>>,
+    cutoff: usize,
+) {
     while let Ok(rules) = r.recv() {
         let hits = matcher::worker_logic(rules, &alines, &aclear, cutoff);
         s.send(hits).unwrap();
@@ -94,15 +94,23 @@ fn main() {
     let allrules = rules::genmutate();
     let minsize = match matches.value_of("minsize") {
         Some(ms) => ms.parse::<usize>().unwrap(),
-        None => 4
+        None => 4,
     };
 
     let wordlist = matches.value_of("wordlist").unwrap();
     let cleartexts = matches.value_of("cleartexts").unwrap();
     let scombos = matches.value_of("combos").unwrap_or("1");
     let combos = scombos.parse::<u64>().unwrap();
-    let cutoff = matches.value_of("cutoff").unwrap().parse::<usize>().unwrap();
-    let nthreads = matches.value_of("threads").unwrap_or("4").parse::<usize>().unwrap();
+    let cutoff = matches
+        .value_of("cutoff")
+        .unwrap()
+        .parse::<usize>()
+        .unwrap();
+    let nthreads = matches
+        .value_of("threads")
+        .unwrap_or("4")
+        .parse::<usize>()
+        .unwrap();
 
     if combos != 1 {
         panic!("combos must be 1 for now");
@@ -138,11 +146,13 @@ fn main() {
     });
 
     // receive all results
-    let mut hits : HashMap<Vec<rules::Rule>, BTreeSet<u64>> = HashMap::new();
+    let mut hits: HashMap<Vec<rules::Rule>, BTreeSet<u64>> = HashMap::new();
 
     let bar = ProgressBar::new(rules_count as u64);
-    bar.set_style(indicatif::ProgressStyle::default_bar()
-        .template("[ETA: {eta_precise}] {bar:60.cyan/blue} {pos}/{len} - {msg} rules retained"));
+    bar.set_style(
+        indicatif::ProgressStyle::default_bar()
+            .template("[ETA: {eta_precise}] {bar:60.cyan/blue} {pos}/{len} - {msg} rules retained"),
+    );
     let mut retained = 0;
     for _ in 0..rules_count {
         let cur_hits = recv_hits.recv().unwrap();
@@ -154,12 +164,12 @@ fn main() {
     bar.finish();
 
     // greedy coverage
-    let mut last_set : BTreeSet<u64> = BTreeSet::new();
+    let mut last_set: BTreeSet<u64> = BTreeSet::new();
     while !hits.is_empty() {
-        let mut best_rules : Vec<rules::Rule> = vec![];
-        let mut best_count : usize = 0;
-        let mut best_set : BTreeSet<u64> = BTreeSet::new();
-        let mut to_remove : Vec<Vec<rules::Rule>> = Vec::new();
+        let mut best_rules: Vec<rules::Rule> = vec![];
+        let mut best_count: usize = 0;
+        let mut best_set: BTreeSet<u64> = BTreeSet::new();
+        let mut to_remove: Vec<Vec<rules::Rule>> = Vec::new();
         for im in hits.iter_mut() {
             // early cutoff
             if im.1.len() < cutoff {
@@ -173,7 +183,10 @@ fn main() {
                 continue;
             }
             let curlen = im.1.len();
-            if curlen > best_count || (curlen == best_count && rules::show_rules(im.0).len() < rules::show_rules(&best_rules).len()) {
+            if curlen > best_count
+                || (curlen == best_count
+                    && rules::show_rules(im.0).len() < rules::show_rules(&best_rules).len())
+            {
                 best_count = curlen;
                 best_rules = im.0.clone();
                 best_set = im.1.clone();
