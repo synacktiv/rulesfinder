@@ -34,11 +34,11 @@ fn read_wordlist(wordlist: &str) -> Vec<Vec<u8>> {
     let rdr = io::BufReader::new(file);
     // collect all lines into a shared arc, removing those that are already known
     let mut all_lines = Vec::new();
-    for rawline in rdr.split('\n' as u8) {
+    for rawline in rdr.split(b'\n') {
         let line = rawline.unwrap();
         all_lines.push(line);
     }
-    return all_lines;
+    all_lines
 }
 
 fn main() {
@@ -148,20 +148,20 @@ fn main() {
     // receive all results
     let mut hits: HashMap<Vec<rules::Rule>, BTreeSet<u64>> = HashMap::new();
 
-    let bar = ProgressBar::new(rules_count as u64);
-    bar.set_style(
+    let progress = ProgressBar::new(rules_count as u64);
+    progress.set_style(
         indicatif::ProgressStyle::default_bar()
             .template("[ETA: {eta_precise}] {bar:60.cyan/blue} {pos}/{len} - {msg} rules retained"),
     );
     let mut retained = 0;
     for _ in 0..rules_count {
         let cur_hits = recv_hits.recv().unwrap();
-        bar.set_message(retained.to_string().as_str());
-        bar.inc(1);
+        progress.set_message(retained.to_string().as_str());
+        progress.inc(1);
         retained += cur_hits.len();
         hits.extend(cur_hits);
     }
-    bar.finish();
+    progress.finish();
 
     // greedy coverage
     let mut last_set: BTreeSet<u64> = BTreeSet::new();

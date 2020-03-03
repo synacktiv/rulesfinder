@@ -8,7 +8,7 @@ use crate::rules;
 
 pub fn worker_logic(
     rules: Vec<rules::Rule>,
-    wordlist: &Vec<Vec<u8>>,
+    wordlist: &[Vec<u8>],
     aclear: &HashMap<Vec<u8>, Vec<(Vec<u8>, Vec<u8>, u64)>>,
     cutoff: usize,
 ) -> HashMap<Vec<rules::Rule>, BTreeSet<u64>> {
@@ -24,10 +24,10 @@ pub fn worker_logic(
                         use rules::Numerical::{Infinite, Val};
                         use rules::Rule::Command;
                         let mut currule = rules.clone();
-                        if prefix.len() > 0 {
+                        if !prefix.is_empty() {
                             currule.push(Command(InsertString(Val(0), prefix.clone())));
                         }
-                        if suffix.len() > 0 {
+                        if !suffix.is_empty() {
                             currule.push(Command(InsertString(Infinite, suffix.clone())));
                         }
                         hits.entry(currule)
@@ -45,7 +45,7 @@ pub fn worker_logic(
         };
     }
     hits.retain(|_, st| st.len() >= cutoff);
-    return hits;
+    hits
 }
 
 #[cfg(test)]

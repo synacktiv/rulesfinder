@@ -7,11 +7,11 @@ static CONV_VOWELS: &str = "`1234567890-=\\QWeRTYuioP[]aSDFGHJKL;'ZXCVBNM,./~!@#
 static CONV_RIGHT: &str = "1234567890-=\\\\wertyuiop[]]sdfghjkl;''xcvbnm,./\\!@#$%^&*()_+||WERTYUIOP{}}SDFGHJKL:\"\"XCVBNM<>?|";
 static CONV_LEFT: &str = "``1234567890-=qqwertyuiop[aasdfghjkl;zzxcvbnm,.~~!@#$%^&*()_+QQWERTYUIOP{AASDFGHJKL:ZZXCVBNM<>";
 
-static CHARS_VOWELS: &[u8] = "aeiouAEIOU".as_bytes();
-static CHARS_CONSONANTS: &[u8] = "bcdfghjklmnpqrstvwxyzBCDFGHJKLMNPQRSTVWXYZ".as_bytes();
-static CHARS_WHITESPACE: &[u8] = " \t".as_bytes();
-static CHARS_PUNCTUATION: &[u8] = ".,:;'\x22?!`".as_bytes();
-static CHARS_SPECIALS: &[u8] = "$%^&*()-_+=|\\<>[]{}#@/~".as_bytes();
+static CHARS_VOWELS: &[u8] = b"aeiouAEIOU";
+static CHARS_CONSONANTS: &[u8] = b"bcdfghjklmnpqrstvwxyzBCDFGHJKLMNPQRSTVWXYZ";
+static CHARS_WHITESPACE: &[u8] = b" \t";
+static CHARS_PUNCTUATION: &[u8] = b".,:;'\x22?!`";
+static CHARS_SPECIALS: &[u8] = b"$%^&*()-_+=|\\<>[]{}#@/~";
 static CHARS_CONTROL_ASCII: &[u8] = &[
     0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10, 0x11,
     0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E, 0x1F, 0x7F, 0x84,
@@ -28,7 +28,7 @@ fn rules_init_conv(ssrc: &str, sdst: &str) -> [u8; 256] {
     for (&s, &d) in src.iter().zip(dst.iter()) {
         out[s as usize] = d;
     }
-    return out;
+    out
 }
 
 pub struct Converts {
@@ -40,13 +40,13 @@ pub struct Converts {
 }
 
 fn make_converts() -> Converts {
-    return Converts {
+    Converts {
         cshift: rules_init_conv(CONV_SOURCE, CONV_SHIFT),
         cinvert: rules_init_conv(CONV_SOURCE, CONV_INVERT),
         cleft: rules_init_conv(CONV_SOURCE, CONV_LEFT),
         cright: rules_init_conv(CONV_SOURCE, CONV_RIGHT),
         cvowels: rules_init_conv(CONV_SOURCE, CONV_VOWELS),
-    };
+    }
 }
 
 #[derive(Hash, Eq, PartialEq, Debug, Clone)]
@@ -204,14 +204,14 @@ pub struct RuleEnv {
 fn eval_length(nm: &Numerical, env: &RuleEnv) -> u8 {
     use Numerical::*;
     match nm {
-        Val(x) => x.clone(),
+        Val(x) => *x,
         MinLen => 0,
         MinLenMinus1 => 0,
         MinLenPlus1 => 1,
         MaxLen => 254,
         MaxLenMinus1 => 253,
         MaxLenPlus1 => 255,
-        SavedLen(uvar) => env.userlen.get(&uvar).unwrap_or(&0).clone(),
+        SavedLen(uvar) => *env.userlen.get(&uvar).unwrap_or(&0),
         WordLen => env.savedlen,
         WordLastCharPos => {
             if env.savedlen == 0 {
@@ -233,14 +233,12 @@ fn check_class(c: u8, cl: &CharClass) -> bool {
         CCWhitespace => CHARS_WHITESPACE.contains(&c),
         CCPunctuation => CHARS_PUNCTUATION.contains(&c),
         CCSymbols => CHARS_SPECIALS.contains(&c),
-        CCLower => c >= 'a' as u8 && c <= 'z' as u8,
-        CCUpper => c >= 'A' as u8 && c <= 'Z' as u8,
-        CCDigits => c >= '0' as u8 && c <= '9' as u8,
-        CCLetters => (c >= 'a' as u8 && c <= 'z' as u8) || (c >= 'A' as u8 && c <= 'Z' as u8),
+        CCLower => c >= b'a' && c <= b'z',
+        CCUpper => c >= b'A' && c <= b'Z',
+        CCDigits => c >= b'0' && c <= b'9',
+        CCLetters => (c >= b'a' && c <= b'z') || (c >= b'A' && c <= b'Z'),
         CCAlphaNum => {
-            (c >= 'a' as u8 && c <= 'z' as u8)
-                || (c >= 'A' as u8 && c <= 'Z' as u8)
-                || (c >= '0' as u8 && c <= '9' as u8)
+            (c >= b'a' && c <= b'z') || (c >= b'A' && c <= b'Z') || (c >= b'0' && c <= b'9')
         }
         CCControl => CHARS_CONTROL_ASCII.contains(&c),
         CCAll => true,
@@ -257,7 +255,7 @@ fn in_class(c: u8, cl: &CharSelector) -> bool {
     }
 }
 
-fn must_reject(rj: &RejectRule, word: &Vec<u8>, env: &RuleEnv) -> bool {
+fn must_reject(rj: &RejectRule, word: &[u8], env: &RuleEnv) -> bool {
     use RejectRule::*;
     match rj {
         UnlessWordLengthLessThan(n) => word.len() as u8 <= eval_length(n, env),
@@ -429,9 +427,7 @@ pub fn mutate(word: &[u8], rules: &[Rule]) -> Option<Vec<u8>> {
                         if curlength < 2 {
                             return None;
                         }
-                        let c1 = cur[0];
-                        cur[0] = cur[1];
-                        cur[1] = c1;
+                        cur.swap(0, 1);
                     }
                     SwapLastTwo => {
                         if let Some(last) = cur.pop() {
@@ -451,9 +447,7 @@ pub fn mutate(word: &[u8], rules: &[Rule]) -> Option<Vec<u8>> {
                         if curlength <= p1_ || curlength <= p2_ {
                             return None;
                         }
-                        let c1 = cur[p1_];
-                        cur[p1_] = cur[p2_];
-                        cur[p2_] = c1;
+                        cur.swap(p1_, p2_);
                     }
                     Increment(p) => {
                         let pos = eval_length(p, &env) as usize;
@@ -582,26 +576,26 @@ pub fn mutate(word: &[u8], rules: &[Rule]) -> Option<Vec<u8>> {
                             || last_letter == 'z'
                             || (last_letter == 'h' && (prev_letter == 'c' || prev_letter == 's'))
                         {
-                            cur.push('e' as u8);
-                            cur.push('s' as u8);
+                            cur.push(b'e');
+                            cur.push(b's');
                         } else if last_letter == 'f' && prev_letter != 'f' {
-                            cur[curlength - 1] = 'v' as u8;
-                            cur.push('e' as u8);
-                            cur.push('s' as u8);
+                            cur[curlength - 1] = b'v';
+                            cur.push(b'e');
+                            cur.push(b's');
                         } else if last_letter == 'e' && prev_letter == 'f' {
-                            cur[curlength - 2] = 'v' as u8;
-                            cur[curlength - 1] = 'e' as u8;
-                            cur.push('s' as u8);
+                            cur[curlength - 2] = b'v';
+                            cur[curlength - 1] = b'e';
+                            cur.push(b's');
                         } else if last_letter == 'y' {
                             if is_vowel_no_y(prev_letter) {
-                                cur.push('s' as u8);
+                                cur.push(b's');
                             } else {
-                                cur[curlength - 1] = 'i' as u8;
-                                cur.push('e' as u8);
-                                cur.push('s' as u8);
+                                cur[curlength - 1] = b'i';
+                                cur.push(b'e');
+                                cur.push(b's');
                             }
                         } else {
-                            cur.push('s' as u8);
+                            cur.push(b's');
                         }
                     }
                     PastTense => {
@@ -619,10 +613,10 @@ pub fn mutate(word: &[u8], rules: &[Rule]) -> Option<Vec<u8>> {
                                 cur.push(raw_last_letter);
                             }
                             if last_letter == 'e' {
-                                cur.push('d' as u8);
+                                cur.push(b'd');
                             } else {
-                                cur.push('e' as u8);
-                                cur.push('d' as u8);
+                                cur.push(b'e');
+                                cur.push(b'd');
                             }
                         }
                     }
@@ -636,16 +630,16 @@ pub fn mutate(word: &[u8], rules: &[Rule]) -> Option<Vec<u8>> {
                         let pprev_letter = cur[curlength - 3] as char;
                         if last_letter != 'g' || prev_letter != 'n' || pprev_letter != 'i' {
                             if is_vowel_no_y(last_letter) {
-                                cur[curlength - 1] = 'i' as u8;
-                                cur.push('n' as u8);
-                                cur.push('g' as u8);
+                                cur[curlength - 1] = b'i';
+                                cur.push(b'n');
+                                cur.push(b'g');
                             } else {
                                 if is_bgp(last_letter) && !is_bgp(prev_letter) {
                                     cur.push(raw_last_letter);
                                 }
-                                cur.push('i' as u8);
-                                cur.push('n' as u8);
-                                cur.push('g' as u8);
+                                cur.push(b'i');
+                                cur.push(b'n');
+                                cur.push(b'g');
                             }
                         }
                     }
@@ -665,7 +659,7 @@ pub fn mutate(word: &[u8], rules: &[Rule]) -> Option<Vec<u8>> {
             }
         }
     }
-    return Some(cur);
+    Some(cur)
 }
 
 pub fn show_command(cmd: &CommandRule) -> String {
@@ -687,8 +681,8 @@ pub fn show_command(cmd: &CommandRule) -> String {
         Reflect => String::from("f"),
         RotLeft => String::from("{"),
         RotRight => String::from("}"),
-        Append(x) => String::from("$") + show_char(x).as_str(),
-        Prefix(x) => String::from("^") + show_char(x).as_str(),
+        Append(x) => String::from("$") + show_char(*x).as_str(),
+        Prefix(x) => String::from("^") + show_char(*x).as_str(),
         InsertString(n, s) => String::from("A") + show_num(n).as_str() + show_string(s).as_str(),
         Truncate(n) => String::from("'") + show_num(n).as_str(),
         Pluralize => String::from("p"),
@@ -698,8 +692,8 @@ pub fn show_command(cmd: &CommandRule) -> String {
         DeleteLast => String::from("]"),
         DeleteAt(n) => String::from("D") + show_num(n).as_str(),
         Extract(n, m) => String::from("x") + show_num(n).as_str() + show_num(m).as_str(),
-        InsertChar(n, c) => String::from("i") + show_num(n).as_str() + show_char(c).as_str(),
-        Overstrike(n, c) => String::from("o") + show_num(n).as_str() + show_char(c).as_str(),
+        InsertChar(n, c) => String::from("i") + show_num(n).as_str() + show_char(*c).as_str(),
+        Overstrike(n, c) => String::from("o") + show_num(n).as_str() + show_char(*c).as_str(),
         Memorize => String::from("M"),
         ExtractInsert(n, m, o) => {
             String::from("X") + show_num(n).as_str() + show_num(m).as_str() + show_num(o).as_str()
@@ -710,7 +704,7 @@ pub fn show_command(cmd: &CommandRule) -> String {
                 + show_num(n).as_str()
                 + show_num(m).as_str()
         }
-        ReplaceAll(cc, c) => String::from("s") + show_cs(cc).as_str() + show_char(c).as_str(),
+        ReplaceAll(cc, c) => String::from("s") + show_cs(cc).as_str() + show_char(*c).as_str(),
         PurgeAll(cc) => String::from("@") + show_cs(cc).as_str(),
         TitleCase(cc) => String::from("E") + show_cs(cc).as_str(),
         DupWordNTimes(n) => String::from("p") + show_num(n).as_str(),
@@ -739,9 +733,9 @@ pub fn show_num(n: &Numerical) -> String {
     match n {
         Val(n) => {
             if *n > 10 {
-                ((*n - 10 + 'A' as u8) as char).to_string()
+                ((*n - 10 + b'A') as char).to_string()
             } else {
-                ((*n + '0' as u8) as char).to_string()
+                ((*n + b'0') as char).to_string()
             }
         }
         MinLen => String::from("#"),
@@ -758,28 +752,27 @@ pub fn show_num(n: &Numerical) -> String {
     }
 }
 
-pub fn show_char(x: &u8) -> String {
-    let c = *x as char;
-    if (c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') {
+pub fn show_char(c: u8) -> String {
+    if (c >= b'0' && c <= b'9') || (c >= b'A' && c <= b'Z') || (c >= b'a' && c <= b'z') {
         return c.to_string();
     }
-    let h = format!("{:x}", x);
+    let h = format!("{:x}", c);
     let mut o = String::from("\\x");
     if h.len() == 1 {
         o.push('0');
     }
     o += h.as_str();
-    return o;
+    o
 }
 
-pub fn show_string(x: &Vec<u8>) -> String {
+pub fn show_string(x: &[u8]) -> String {
     let mut o = String::new();
     o.push('"');
     for c in x {
         o.push(*c as char);
     }
     o.push('"');
-    return o;
+    o
 }
 
 pub fn show_uservar(x: &UserVar) -> String {
@@ -815,7 +808,7 @@ pub fn show_cc(cs: &CharClass) -> String {
         CCControl => String::from("?o"),
         CCAll => String::from("?z"),
         CCBit8 => String::from("?b"),
-        CCSingle(x) => show_char(x),
+        CCSingle(x) => show_char(*x),
     }
 }
 
@@ -829,13 +822,13 @@ pub fn show_cs(cs: &CharSelector) -> String {
             x
         }
     };
-    return o + show_cc(cc).as_str();
+    o + show_cc(cc).as_str()
 }
 
 pub fn show_reject(rej: &RejectRule) -> String {
     use RejectRule::*;
     fn pairn(a: &str, b: String) -> String {
-        return String::from(a) + b.as_str();
+        String::from(a) + b.as_str()
     }
     match rej {
         Noop => String::from("-:"),
@@ -877,7 +870,7 @@ pub fn show_rules(rules: &[Rule]) -> String {
     for rule in rules {
         o += show_rule(rule).as_str();
     }
-    return o;
+    o
 }
 
 pub fn genmutate() -> Vec<Rule> {
@@ -925,13 +918,13 @@ pub fn genmutate() -> Vec<Rule> {
         WordLastCharPos,
     ];
 
-    for letter in 'a' as u8..('z' as u8 + 1) {
+    for letter in b'a'..=b'z' {
         cmds.push(PurgeAll(OneOf(CCSingle(letter))));
     }
-    for letter in 'A' as u8..('Z' as u8 + 1) {
+    for letter in b'A'..=b'Z' {
         cmds.push(PurgeAll(OneOf(CCSingle(letter))));
     }
-    for letter in '0' as u8..('9' as u8 + 1) {
+    for letter in b'0'..=b'9' {
         cmds.push(PurgeAll(OneOf(CCSingle(letter))));
     }
     for n in numericals.iter() {
@@ -955,8 +948,8 @@ pub fn genmutate() -> Vec<Rule> {
             cmds.push(OmitRange(n.clone(), m.clone()));
         }
         for c in CONV_SOURCE.as_bytes().iter() {
-            cmds.push(InsertChar(n.clone(), c.clone()));
-            cmds.push(Overstrike(n.clone(), c.clone()));
+            cmds.push(InsertChar(n.clone(), *c));
+            cmds.push(Overstrike(n.clone(), *c));
         }
     }
 
@@ -973,7 +966,7 @@ pub fn genmutate() -> Vec<Rule> {
     TitleCase(CharSelector),
     */
 
-    return out;
+    out
 }
 
 #[cfg(test)]
@@ -1167,7 +1160,7 @@ mod tests {
     fn insert_string() {
         mut_test(
             DEFPWD,
-            &vec![InsertString(Val(3), vec!['l' as u8, 'o' as u8, 'l' as u8])],
+            &vec![InsertString(Val(3), vec![b'l', b'o', b'l'])],
             "aSQloldqdf354gdrf;:;é&",
         );
     }
@@ -1207,11 +1200,11 @@ mod tests {
     }
     #[test]
     fn append() {
-        mut_test("Fred", &vec![Append('x' as u8)], "Fredx");
+        mut_test("Fred", &vec![Append(b'x')], "Fredx");
     }
     #[test]
     fn prefix() {
-        mut_test("Fred", &vec![Prefix('x' as u8)], "xFred");
+        mut_test("Fred", &vec![Prefix(b'x')], "xFred");
     }
     #[test]
     fn delete_first() {
@@ -1241,7 +1234,7 @@ mod tests {
     fn insertchar() {
         mut_test(
             DEFPWD,
-            &vec![InsertChar(Val(3), 'K' as u8)],
+            &vec![InsertChar(Val(3), b'K')],
             "aSQKdqdf354gdrf;:;é&",
         );
     }
@@ -1249,7 +1242,7 @@ mod tests {
     fn overstrike() {
         mut_test(
             DEFPWD,
-            &vec![Overstrike(Val(3), 'K' as u8)],
+            &vec![Overstrike(Val(3), b'K')],
             "aSQKqdf354gdrf;:;é&",
         );
     }
@@ -1257,7 +1250,7 @@ mod tests {
     fn replace_all() {
         mut_test(
             DEFPWD,
-            &vec![ReplaceAll(OneOf(CCPunctuation), '0' as u8)],
+            &vec![ReplaceAll(OneOf(CCPunctuation), b'0')],
             "aSQdqdf354gdrf000é&",
         );
     }

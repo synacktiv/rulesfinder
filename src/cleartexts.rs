@@ -6,7 +6,7 @@ use std::io::{self, BufRead};
 pub fn process_line(
     out: &mut HashMap<Vec<u8>, Vec<(Vec<u8>, Vec<u8>, u64)>>,
     nth: u64,
-    line: &Vec<u8>,
+    line: &[u8],
     minsize: usize,
 ) -> usize {
     let ln = line.len();
@@ -29,7 +29,7 @@ pub fn process_line(
                 });
         }
     }
-    return inserted;
+    inserted
 }
 
 // returns a map with all the fragments, and a hashset with all the lines
@@ -49,7 +49,7 @@ pub fn process(
     let mut inserted = 0;
     let mut expected_size = 0;
 
-    for rline in rdr.split('\n' as u8) {
+    for rline in rdr.split(b'\n') {
         let line = rline?;
         let llen = line.len();
         if llen < minsize || known.contains(&line) {
@@ -57,7 +57,7 @@ pub fn process(
         }
         idx.insert(i, line);
         i += 1;
-        for l in minsize..llen + 1 {
+        for l in minsize..=llen {
             expected_size += llen + 1 - l;
         }
     }
@@ -66,8 +66,8 @@ pub fn process(
     // this will reserve way too much space here, but it is not too bad, as this is nothing
     // compared to what's inside the map ...
     let mut out = HashMap::with_capacity(expected_size * 7 / 10);
-    let bar = ProgressBar::new(i);
-    bar.set_style(indicatif::ProgressStyle::default_bar().template(
+    let progress = ProgressBar::new(i);
+    progress.set_style(indicatif::ProgressStyle::default_bar().template(
         "[ETA: {eta_precise}] {bar:60.cyan/blue} {pos}/{len} - {msg} fragments inserted",
     ));
     i = 0;
@@ -75,13 +75,13 @@ pub fn process(
         inserted += process_line(&mut out, *k, &line, minsize);
         i += 1;
         if i % 2000 == 0 {
-            bar.set_message(inserted.to_string().as_str());
-            bar.set_position(i);
+            progress.set_message(inserted.to_string().as_str());
+            progress.set_position(i);
         }
     }
-    bar.finish();
+    progress.finish();
 
-    return Ok((out, idx));
+    Ok((out, idx))
 }
 
 #[cfg(test)]
