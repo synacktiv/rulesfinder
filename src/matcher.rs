@@ -20,15 +20,23 @@ pub fn worker_logic(
                 None => (),
                 Some(matches) => {
                     for (prefix, suffix, nth) in matches {
-                        use rules::CommandRule::InsertString;
+                        use rules::CommandRule::{Append, Prefix, InsertString};
                         use rules::Numerical::{Infinite, Val};
                         use rules::Rule::Command;
                         let mut currule = rules.clone();
                         if !prefix.is_empty() {
-                            currule.push(Command(InsertString(Val(0), prefix.clone())));
+                            if prefix.len() == 1 {
+                                currule.push(Command(Prefix(prefix[0])));
+                            } else {
+                                currule.push(Command(InsertString(Val(0), prefix.clone())));
+                            }
                         }
                         if !suffix.is_empty() {
-                            currule.push(Command(InsertString(Infinite, suffix.clone())));
+                            if suffix.len() == 1 {
+                                currule.push(Command(Append(suffix[0])));
+                            } else {
+                                currule.push(Command(InsertString(Infinite, suffix.clone())));
+                            }
                         }
                         hits.entry(currule)
                             .and_modify(|hs| {
