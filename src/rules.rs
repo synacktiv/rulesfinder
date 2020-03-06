@@ -910,6 +910,22 @@ pub fn genmutate() -> Vec<Vec<Rule>> {
         DupWordNTimes(Val(4)),
         TitleCase(OneOf(CCPunctuation)),
         TitleCase(OneOf(CCWhitespace)),
+        ReplaceAll(OneOf(CCSingle(b'q')), b'Q'),
+        ReplaceAll(OneOf(CCSingle(b'y')), b'i'),
+        ReplaceAll(OneOf(CCSingle(b'i')), b'y'),
+        ReplaceAll(OneOf(CCSingle(b'i')), b'!'),
+    ];
+    let leetrules = [
+        ReplaceAll(OneOf(CCSingle(b'a')), b'4'),
+        ReplaceAll(OneOf(CCSingle(b'e')), b'3'),
+        ReplaceAll(OneOf(CCSingle(b'i')), b'1'),
+        ReplaceAll(OneOf(CCSingle(b'o')), b'0'),
+        ReplaceAll(OneOf(CCSingle(b's')), b'5'),
+        ReplaceAll(OneOf(CCSingle(b'A')), b'4'),
+        ReplaceAll(OneOf(CCSingle(b'E')), b'3'),
+        ReplaceAll(OneOf(CCSingle(b'I')), b'1'),
+        ReplaceAll(OneOf(CCSingle(b'O')), b'0'),
+        ReplaceAll(OneOf(CCSingle(b'S')), b'5'),
     ];
     let numericals = [
         Val(0),
@@ -930,6 +946,12 @@ pub fn genmutate() -> Vec<Vec<Rule>> {
     for cmd in basecmds {
         out.push(vec![Command(cmd)]);
     }
+    let mut lr = Vec::new();
+    for cmd in &leetrules {
+        out.push(vec![Command(cmd.clone())]);
+        lr.push(Command(cmd.clone()));
+    }
+    out.push(lr);
 
     let mut rl = Vec::new();
     let mut rr = Vec::new();
@@ -948,9 +970,6 @@ pub fn genmutate() -> Vec<Vec<Rule>> {
 
     for letter in b'a'..=b'z' {
         out.push(vec![Command(PurgeAll(OneOf(CCSingle(letter))))]);
-        for d in CONV_SOURCE.as_bytes().iter() {
-            out.push(vec![Command(ReplaceAll(OneOf(CCSingle(letter)), *d))]);
-        }
     }
     for letter in b'A'..=b'Z' {
         out.push(vec![Command(PurgeAll(OneOf(CCSingle(letter))))]);
