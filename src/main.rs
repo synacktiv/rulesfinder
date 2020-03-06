@@ -194,8 +194,9 @@ fn main() {
         hits.remove(&best_rules);
         last_set = best_set;
         if best_count > 0 {
+            total_cracked += best_count;
             // do not print the final loop, where 'hits' is empty and nothing was found!
-            println!("{} // [{}]", rules::show_rules(&best_rules), best_count);
+            println!("{} // [{} - {}]", rules::show_rules(&best_rules), best_count, total_cracked);
         }
     }
     // without this, it takes a long time to free the large "hits" hashmap
