@@ -881,13 +881,13 @@ pub fn show_commands(rules: &[CommandRule]) -> String {
     o
 }
 
-pub fn genmutate() -> Vec<Rule> {
+pub fn genmutate() -> Vec<Vec<Rule>> {
     use CharClass::*;
     use CharSelector::*;
     use CommandRule::*;
     use Numerical::*;
     use Rule::Command;
-    let mut cmds = vec![
+    let basecmds = vec![
         Noop,
         ToLower,
         ToUpper,
@@ -900,8 +900,6 @@ pub fn genmutate() -> Vec<Rule> {
         Reverse,
         Duplicate,
         Reflect,
-        RotLeft,
-        RotRight,
         Pluralize,
         PastTense,
         Genitive,
@@ -926,45 +924,64 @@ pub fn genmutate() -> Vec<Rule> {
         WordLastCharPos,
     ];
 
+    let mut out = Vec::new();
+    for cmd in basecmds {
+        out.push(vec![Command(cmd)]);
+    }
+
+    let mut rl = Vec::new();
+    let mut rr = Vec::new();
+    let mut df = Vec::new();
+    let mut dl = Vec::new();
+    for _ in 0..4 {
+        rl.push(Command(RotLeft));
+        rr.push(Command(RotRight));
+        df.push(Command(DeleteFirst));
+        dl.push(Command(DeleteLast));
+        out.push(rl.clone());
+        out.push(rr.clone());
+        out.push(df.clone());
+        out.push(dl.clone());
+    }
+
     for letter in b'a'..=b'z' {
-        cmds.push(PurgeAll(OneOf(CCSingle(letter))));
+        out.push(vec![Command(PurgeAll(OneOf(CCSingle(letter))))]);
+        for d in CONV_SOURCE.as_bytes().iter() {
+            out.push(vec![Command(ReplaceAll(OneOf(CCSingle(letter)), *d))]);
+        }
     }
     for letter in b'A'..=b'Z' {
-        cmds.push(PurgeAll(OneOf(CCSingle(letter))));
+        out.push(vec![Command(PurgeAll(OneOf(CCSingle(letter))))]);
     }
     for letter in b'0'..=b'9' {
-        cmds.push(PurgeAll(OneOf(CCSingle(letter))));
+        out.push(vec![Command(PurgeAll(OneOf(CCSingle(letter))))]);
     }
     for n in numericals.iter() {
-        cmds.push(ToggleCase(n.clone()));
-        cmds.push(ToggleShift(n.clone()));
-        cmds.push(Truncate(n.clone()));
-        cmds.push(DeleteAt(n.clone()));
-        cmds.push(Increment(n.clone()));
-        cmds.push(Decrement(n.clone()));
-        cmds.push(BitshiftRight(n.clone()));
-        cmds.push(BitshiftLeft(n.clone()));
-        cmds.push(DupeFirstChar(n.clone()));
-        cmds.push(DupeLastChar(n.clone()));
-        cmds.push(ReplaceWithNext(n.clone()));
-        cmds.push(ReplaceWithPrior(n.clone()));
-        cmds.push(DupFirstString(n.clone()));
-        cmds.push(DupLastString(n.clone()));
+        out.push(vec![Command(ToggleCase(n.clone()))]);
+        out.push(vec![Command(ToggleShift(n.clone()))]);
+        out.push(vec![Command(Truncate(n.clone()))]);
+        out.push(vec![Command(DeleteAt(n.clone()))]);
+        out.push(vec![Command(Increment(n.clone()))]);
+        out.push(vec![Command(Decrement(n.clone()))]);
+        out.push(vec![Command(BitshiftRight(n.clone()))]);
+        out.push(vec![Command(BitshiftLeft(n.clone()))]);
+        out.push(vec![Command(DupeFirstChar(n.clone()))]);
+        out.push(vec![Command(DupeLastChar(n.clone()))]);
+        out.push(vec![Command(ReplaceWithNext(n.clone()))]);
+        out.push(vec![Command(ReplaceWithPrior(n.clone()))]);
+        out.push(vec![Command(DupFirstString(n.clone()))]);
+        out.push(vec![Command(DupLastString(n.clone()))]);
         for m in numericals.iter() {
-            cmds.push(Extract(n.clone(), m.clone()));
-            cmds.push(Swap(n.clone(), m.clone()));
-            cmds.push(OmitRange(n.clone(), m.clone()));
+            out.push(vec![Command(Extract(n.clone(), m.clone()))]);
+            out.push(vec![Command(Swap(n.clone(), m.clone()))]);
+            out.push(vec![Command(OmitRange(n.clone(), m.clone()))]);
         }
         for c in CONV_SOURCE.as_bytes().iter() {
-            cmds.push(InsertChar(n.clone(), *c));
-            cmds.push(Overstrike(n.clone(), *c));
+            out.push(vec![Command(InsertChar(n.clone(), *c))]);
+            out.push(vec![Command(Overstrike(n.clone(), *c))]);
         }
     }
 
-    let mut out = Vec::new();
-    for cmd in cmds {
-        out.push(Command(cmd));
-    }
     /*
     ReplaceAll(CharSelector, u8),
     InsertString(Numerical, String),

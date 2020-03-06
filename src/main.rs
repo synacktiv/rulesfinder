@@ -136,8 +136,7 @@ fn main() {
     // send all rules in the queue
     thread::spawn(move || {
         for rule in allrules.iter() {
-            let vrule = vec![rule.clone()];
-            send_rule.send(vrule).unwrap();
+            send_rule.send(rule.clone()).unwrap();
         }
     });
 
@@ -161,6 +160,7 @@ fn main() {
 
     // greedy coverage
     let mut last_set: BTreeSet<u64> = BTreeSet::new();
+    let mut total_cracked = 0;
     while !hits.is_empty() {
         let mut best_rules: Vec<rules::Rule> = vec![];
         let mut best_count: usize = 0;
