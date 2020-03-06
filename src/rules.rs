@@ -49,7 +49,7 @@ fn make_converts() -> Converts {
     }
 }
 
-#[derive(Hash, Eq, PartialEq, Debug, Clone)]
+#[derive(Hash, Eq, PartialEq, Debug, Clone, PartialOrd)]
 pub enum UserVar {
     UVA,
     UVB,
@@ -64,7 +64,7 @@ pub enum UserVar {
     UVK,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd)]
 pub enum Numerical {
     Val(u8),
     MinLen,
@@ -80,7 +80,7 @@ pub enum Numerical {
     Infinite,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd)]
 pub enum RejectRule {
     Noop,
     UnlessCaseSensitive,
@@ -106,13 +106,13 @@ pub enum RejectRule {
     RejectTheWordUnlessDifferent,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd)]
 pub enum CharSelector {
     OneOf(CharClass),
     NoneOf(CharClass),
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd)]
 pub enum CharClass {
     CCVowels,
     CCConsonants,
@@ -131,7 +131,7 @@ pub enum CharClass {
     CCSingle(u8), // TODO: user defined
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd)]
 pub enum CommandRule {
     Noop,
     ToLower,
@@ -149,46 +149,46 @@ pub enum CommandRule {
     Reflect,
     RotLeft,
     RotRight,
-    Append(u8),
-    Prefix(u8),
-    InsertString(Numerical, Vec<u8>),
-    Truncate(Numerical),
+    SwapFirstTwo,
+    SwapLastTwo,
+    AppendMemory,
+    PrependMemory,
+    DupeAllChar,
     Pluralize,
     PastTense,
     Genitive,
     DeleteFirst,
     DeleteLast,
-    DeleteAt(Numerical),
-    Extract(Numerical, Numerical),
-    InsertChar(Numerical, u8),
-    Overstrike(Numerical, u8),
     Memorize,
-    ExtractInsert(Numerical, Numerical, Numerical),
-    MemoryAssign(UserVar, Numerical, Numerical), // untested
-    ReplaceAll(CharSelector, u8),
+    DeleteAt(Numerical),
     PurgeAll(CharSelector),
     TitleCase(CharSelector),
     DupWordNTimes(Numerical),
     BitshiftRight(Numerical),
     BitshiftLeft(Numerical),
-    SwapFirstTwo,
-    SwapLastTwo,
     Swap(Numerical, Numerical),
     Increment(Numerical),
     Decrement(Numerical),
-    AppendMemory,
-    PrependMemory,
-    OmitRange(Numerical, Numerical),
     DupeFirstChar(Numerical),
     DupeLastChar(Numerical),
     ReplaceWithNext(Numerical),
     ReplaceWithPrior(Numerical),
     DupFirstString(Numerical),
     DupLastString(Numerical),
-    DupeAllChar,
+    Append(u8),
+    Prefix(u8),
+    OmitRange(Numerical, Numerical),
+    InsertChar(Numerical, u8),
+    Overstrike(Numerical, u8),
+    Extract(Numerical, Numerical),
+    ReplaceAll(CharSelector, u8),
+    Truncate(Numerical),
+    InsertString(Numerical, Vec<u8>),
+    ExtractInsert(Numerical, Numerical, Numerical),
+    MemoryAssign(UserVar, Numerical, Numerical), // untested
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd)]
 pub enum Rule {
     Reject(RejectRule),
     Command(CommandRule),

@@ -41,6 +41,12 @@ fn read_wordlist(wordlist: &str) -> Vec<Vec<u8>> {
     all_lines
 }
 
+fn shorter_rules(a: &Vec<rules::Rule>, b: &Vec<rules::Rule>) -> bool {
+    let la = rules::show_rules(a).len();
+    let lb = rules::show_rules(b).len();
+    la < lb || (la == lb && a < b)
+}
+
 fn main() {
     let matches = App::new("rulesfinder")
         .version("0.1")
@@ -179,10 +185,7 @@ fn main() {
                 continue;
             }
             let curlen = im.1.len();
-            if curlen > best_count
-                || (curlen == best_count
-                    && rules::show_rules(im.0).len() < rules::show_rules(&best_rules).len())
-            {
+            if curlen > best_count || (curlen == best_count && shorter_rules(im.0, &best_rules)) {
                 best_count = curlen;
                 best_rules = im.0.clone();
                 best_set = im.1.clone();
@@ -196,7 +199,12 @@ fn main() {
         if best_count > 0 {
             total_cracked += best_count;
             // do not print the final loop, where 'hits' is empty and nothing was found!
-            println!("{} // [{} - {}]", rules::show_rules(&best_rules), best_count, total_cracked);
+            println!(
+                "{} // [{} - {}]",
+                rules::show_rules(&best_rules),
+                best_count,
+                total_cracked
+            );
         }
     }
     // without this, it takes a long time to free the large "hits" hashmap

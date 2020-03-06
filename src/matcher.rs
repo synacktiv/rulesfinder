@@ -20,7 +20,7 @@ pub fn worker_logic(
                 None => (),
                 Some(matches) => {
                     for (prefix, suffix, nth) in matches {
-                        use rules::CommandRule::{Append, Prefix, InsertString};
+                        use rules::CommandRule::{Append, InsertString, Prefix};
                         use rules::Numerical::{Infinite, Val};
                         use rules::Rule::Command;
                         let mut currule = rules.clone();
