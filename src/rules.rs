@@ -754,7 +754,9 @@ pub fn show_num(n: &Numerical) -> String {
 
 pub fn show_char(c: u8) -> String {
     if (c >= b'0' && c <= b'9') || (c >= b'A' && c <= b'Z') || (c >= b'a' && c <= b'z') {
-        return c.to_string();
+        let mut o = String::new();
+        o.push(c as char);
+        return o;
     }
     let h = format!("{:x}", c);
     let mut o = String::from("\\x");
