@@ -11,7 +11,7 @@ pub fn worker_logic(
     wordlist: &[Vec<u8>],
     aclear: &HashMap<Vec<u8>, Vec<(Vec<u8>, Vec<u8>, u64)>>,
     cutoff: usize,
-) -> HashMap<Vec<rules::Rule>, BTreeSet<u64>> {
+) -> HashMap<Vec<rules::Rule>, Vec<u64>> {
     let mut hits: HashMap<Vec<rules::Rule>, BTreeSet<u64>> = HashMap::new();
     for word in wordlist.iter() {
         match rules::mutate(&word, &rules) {
@@ -53,7 +53,15 @@ pub fn worker_logic(
         };
     }
     hits.retain(|_, st| st.len() >= cutoff);
-    hits
+    let mut res : HashMap<Vec<rules::Rule>, Vec<u64>> = HashMap::new();
+    for (k, st) in &hits {
+        let mut v = Vec::new();
+        for e in st {
+            v.push(*e);
+        }
+        res.insert(k.clone(), v);
+    }
+    res
 }
 
 #[cfg(test)]

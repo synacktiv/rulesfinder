@@ -3,7 +3,6 @@ extern crate crossbeam;
 
 use clap::{App, Arg};
 use indicatif::ProgressBar;
-use std::collections::BTreeSet;
 use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::{self, BufRead};
@@ -18,7 +17,7 @@ mod rules;
 
 fn worker_thread(
     r: crossbeam::channel::Receiver<Vec<rules::Rule>>,
-    s: crossbeam::channel::Sender<HashMap<Vec<rules::Rule>, BTreeSet<u64>>>,
+    s: crossbeam::channel::Sender<HashMap<Vec<rules::Rule>, Vec<u64>>>,
     alines: Arc<Vec<Vec<u8>>>,
     aclear: Arc<HashMap<Vec<u8>, Vec<(Vec<u8>, Vec<u8>, u64)>>>,
     cutoff: usize,
@@ -45,6 +44,35 @@ fn shorter_rules(a: &Vec<rules::Rule>, b: &Vec<rules::Rule>) -> bool {
     let la = rules::show_rules(a).len();
     let lb = rules::show_rules(b).len();
     la < lb || (la == lb && a < b)
+}
+
+fn sub_set(a: &Vec<u64>, b: &Vec<u64>) -> Vec<u64> {
+    let mut o = Vec::new();
+    let mut ai = a.iter();
+    let mut bi = b.iter();
+    let mut ma = ai.next();
+    let mut mb = bi.next();
+    loop {
+        match(ma, mb) {
+            (Some(cura), Some(curb)) =>
+                if cura == curb {
+                    // skip
+                    ma = ai.next();
+                    mb = bi.next();
+                } else if cura > curb {
+                    mb = bi.next();
+                } else {
+                    o.push(*cura);
+                    ma = ai.next();
+                },
+            (None, _) => break,
+            (Some(cura), None) => {
+                o.push(*cura);
+                ma = ai.next();
+            }
+        }
+    }
+    o
 }
 
 fn main() {
@@ -147,7 +175,7 @@ fn main() {
     });
 
     // receive all results
-    let mut hits: HashMap<Vec<rules::Rule>, BTreeSet<u64>> = HashMap::new();
+    let mut hits: HashMap<Vec<rules::Rule>, Vec<u64>> = HashMap::new();
 
     let progress = ProgressBar::new(rules_count as u64);
     progress
@@ -165,12 +193,12 @@ fn main() {
     progress.finish();
 
     // greedy coverage
-    let mut last_set: BTreeSet<u64> = BTreeSet::new();
+    let mut last_set: Vec<u64> = Vec::new();
     let mut total_cracked = 0;
     while !hits.is_empty() {
         let mut best_rules: Vec<rules::Rule> = vec![];
         let mut best_count: usize = 0;
-        let mut best_set: BTreeSet<u64> = BTreeSet::new();
+        let mut best_set: Vec<u64> = Vec::new();
         let mut to_remove: Vec<Vec<rules::Rule>> = Vec::new();
         for im in hits.iter_mut() {
             // early cutoff
@@ -178,7 +206,7 @@ fn main() {
                 to_remove.push(im.0.clone());
                 continue;
             }
-            *im.1 = &im.1.clone() - &last_set;
+            *im.1 = sub_set(im.1, &last_set);
             // deferred cutoff
             if im.1.len() < cutoff {
                 to_remove.push(im.0.clone());
