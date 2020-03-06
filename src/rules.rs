@@ -1,3 +1,4 @@
+use rand;
 use std::collections::HashMap;
 
 static CONV_SOURCE: &str = "`1234567890-=\\qwertyuiop[]asdfghjkl;'zxcvbnm,./~!@#$%^&*()_+|QWERTYUIOP{}ASDFGHJKL:\"ZXCVBNM<>?";
@@ -64,6 +65,23 @@ pub enum UserVar {
     UVK,
 }
 
+fn rand_uservar<T: rand::Rng>(rng: &mut T) -> UserVar {
+    use UserVar::*;
+    match rng.gen_range(0, 11) {
+        0 => UVA,
+        1 => UVB,
+        2 => UVC,
+        3 => UVD,
+        4 => UVE,
+        5 => UVF,
+        6 => UVG,
+        7 => UVH,
+        8 => UVI,
+        9 => UVJ,
+        _ => UVK,
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd)]
 pub enum Numerical {
     Val(u8),
@@ -78,6 +96,24 @@ pub enum Numerical {
     WordLastCharPos,
     LastFound,
     Infinite,
+}
+
+fn rand_numerical<T: rand::Rng>(rng: &mut T) -> Numerical {
+    use Numerical::*;
+    match rng.gen_range(0, 30) {
+        0 => MinLen,
+        1 => MinLenMinus1,
+        2 => MinLenPlus1,
+        3 => MaxLen,
+        4 => MaxLenMinus1,
+        5 => MaxLenPlus1,
+        6 => SavedLen(rand_uservar(rng)),
+        7 => WordLen,
+        8 => WordLastCharPos,
+        9 => LastFound,
+        10 => Infinite,
+        _ => Val(rng.gen_range(0, 10)),
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd)]
@@ -112,6 +148,15 @@ pub enum CharSelector {
     NoneOf(CharClass),
 }
 
+fn rand_charselector<T: rand::Rng>(rng: &mut T) -> CharSelector {
+    let c = rand_charclass(rng);
+    if rng.gen() {
+        CharSelector::OneOf(c)
+    } else {
+        CharSelector::NoneOf(c)
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd)]
 pub enum CharClass {
     CCVowels,
@@ -131,6 +176,26 @@ pub enum CharClass {
     CCSingle(u8), // TODO: user defined
 }
 
+fn rand_charclass<T: rand::Rng>(rng: &mut T) -> CharClass {
+    use CharClass::*;
+    match rng.gen_range(0, 20) {
+        0 => CCVowels,
+        1 => CCConsonants,
+        2 => CCWhitespace,
+        3 => CCPunctuation,
+        4 => CCSymbols,
+        5 => CCLower,
+        6 => CCUpper,
+        7 => CCDigits,
+        8 => CCLetters,
+        9 => CCAlphaNum,
+        10 => CCControl,
+        11 => CCAll,
+        12 => CCBit8,
+        _ => CCSingle(rng.gen()),
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd)]
 pub enum CommandRule {
     Noop,
@@ -142,8 +207,6 @@ pub enum CommandRule {
     LowerVowelsUpperConsonants,
     ShiftAllKeyboardRight,
     ShiftAllKeyboardLeft,
-    ToggleCase(Numerical),
-    ToggleShift(Numerical),
     Reverse,
     Duplicate,
     Reflect,
@@ -160,6 +223,8 @@ pub enum CommandRule {
     DeleteFirst,
     DeleteLast,
     Memorize,
+    ToggleCase(Numerical),
+    ToggleShift(Numerical),
     DeleteAt(Numerical),
     PurgeAll(CharSelector),
     TitleCase(CharSelector),
@@ -186,6 +251,89 @@ pub enum CommandRule {
     InsertString(Numerical, Vec<u8>),
     ExtractInsert(Numerical, Numerical, Numerical),
     MemoryAssign(UserVar, Numerical, Numerical), // untested
+}
+
+fn rand_commandrule<T: rand::Rng>(rng: &mut T) -> CommandRule {
+    use CommandRule::*;
+    match rng.gen_range(0, 29) {
+        0 => ToLower,
+        1 => ToUpper,
+        2 => Capitalize,
+        3 => ToggleAll,
+        4 => ShiftAll,
+        5 => LowerVowelsUpperConsonants,
+        6 => ShiftAllKeyboardRight,
+        7 => ShiftAllKeyboardLeft,
+        8 => Reverse,
+        9 => Duplicate,
+        10 => Reflect,
+        11 => RotLeft,
+        12 => RotRight,
+        13 => SwapFirstTwo,
+        14 => SwapLastTwo,
+        15 => AppendMemory,
+        16 => PrependMemory,
+        17 => DupeAllChar,
+        18 => Pluralize,
+        19 => PastTense,
+        20 => Genitive,
+        21 => DeleteFirst,
+        22 => DeleteLast,
+        23 => Memorize,
+        24 => ToggleCase(rand_numerical(rng)),
+        25 => ToggleShift(rand_numerical(rng)),
+        26 => DeleteAt(rand_numerical(rng)),
+        27 => PurgeAll(rand_charselector(rng)),
+        28 => TitleCase(rand_charselector(rng)),
+        29 => DupWordNTimes(rand_numerical(rng)),
+        30 => BitshiftRight(rand_numerical(rng)),
+        31 => BitshiftLeft(rand_numerical(rng)),
+        32 => Swap(rand_numerical(rng), rand_numerical(rng)),
+        33 => Increment(rand_numerical(rng)),
+        34 => Decrement(rand_numerical(rng)),
+        35 => DupeFirstChar(rand_numerical(rng)),
+        36 => DupeLastChar(rand_numerical(rng)),
+        37 => ReplaceWithNext(rand_numerical(rng)),
+        38 => ReplaceWithPrior(rand_numerical(rng)),
+        39 => DupFirstString(rand_numerical(rng)),
+        40 => DupLastString(rand_numerical(rng)),
+        41 => OmitRange(rand_numerical(rng), rand_numerical(rng)),
+        42 => InsertChar(rand_numerical(rng), rng.gen()),
+        43 => Overstrike(rand_numerical(rng), rng.gen()),
+        44 => Extract(rand_numerical(rng), rand_numerical(rng)),
+        45 => ReplaceAll(rand_charselector(rng), rng.gen()),
+        46 => Truncate(rand_numerical(rng)),
+        47 => ExtractInsert(
+            rand_numerical(rng),
+            rand_numerical(rng),
+            rand_numerical(rng),
+        ),
+        _ => MemoryAssign(rand_uservar(rng), rand_numerical(rng), rand_numerical(rng)), // untested
+    }
+}
+
+pub fn rand_commandrules() -> Vec<CommandRule> {
+    use rand::Rng;
+    let mut o = Vec::new();
+    let mut rng = rand::thread_rng();
+    let n: u8 = rng.gen();
+    let ln = if n < 100 {
+        1
+    } else if n < 150 {
+        2
+    } else if n < 200 {
+        3
+    } else if n < 230 {
+        4
+    } else {
+        5
+    };
+
+    for _ in 0..ln {
+        o.push(rand_commandrule(&mut rng));
+    }
+
+    o
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd)]
