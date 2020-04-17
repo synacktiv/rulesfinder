@@ -1,6 +1,13 @@
 use rand;
 use std::collections::HashMap;
 
+#[derive(Hash, Eq, PartialEq, Debug, Clone, PartialOrd)]
+enum ToolSupport {
+    JtR,
+    Hashcat,
+    Both,
+}
+
 static CONV_SOURCE: &str = "`1234567890-=\\qwertyuiop[]asdfghjkl;'zxcvbnm,./~!@#$%^&*()_+|QWERTYUIOP{}ASDFGHJKL:\"ZXCVBNM<>?";
 static CONV_SHIFT: &str = "~!@#$%^&*()_+|QWERTYUIOP{}ASDFGHJKL:\"ZXCVBNM<>?`1234567890-=\\qwertyuiop[]asdfghjkl;'zxcvbnm,./";
 static CONV_INVERT: &str = "`1234567890-=\\QWERTYUIOP[]ASDFGHJKL;'ZXCVBNM,./~!@#$%^&*()_+|qwertyuiop{}asdfghjkl:\"zxcvbnm<>?";
@@ -202,6 +209,7 @@ pub enum CommandRule {
     ToLower,
     ToUpper,
     Capitalize,
+    InvertCapitalize,
     ToggleAll,
     ShiftAll,
     LowerVowelsUpperConsonants,
@@ -251,6 +259,8 @@ pub enum CommandRule {
     InsertString(Numerical, Vec<u8>),
     ExtractInsert(Numerical, Numerical, Numerical),
     MemoryAssign(UserVar, Numerical, Numerical), // untested
+                                                 // MISSING
+                                                 // TitleSep - eX - hashcat only
 }
 
 fn rand_commandrule<T: rand::Rng>(rng: &mut T) -> CommandRule {
@@ -478,6 +488,12 @@ pub fn mutate(word: &[u8], rules: &[Rule]) -> Option<Vec<u8>> {
                         cur.make_ascii_lowercase();
                         if let Some(c) = cur.first_mut() {
                             (*c).make_ascii_uppercase()
+                        }
+                    }
+                    InvertCapitalize => {
+                        cur.make_ascii_uppercase();
+                        if let Some(c) = cur.first_mut() {
+                            (*c).make_ascii_lowercase()
                         }
                     }
                     ToggleAll => run_conv(&mut cur, convs.cinvert),
@@ -813,66 +829,102 @@ pub fn mutate(word: &[u8], rules: &[Rule]) -> Option<Vec<u8>> {
 pub fn show_command(cmd: &CommandRule) -> String {
     use CommandRule::*;
     match cmd {
+        // common
         Noop => String::from(":"),
         ToLower => String::from("l"),
         ToUpper => String::from("u"),
         Capitalize => String::from("c"),
+        InvertCapitalize => String::from("C"),
         ToggleAll => String::from("t"),
-        ShiftAll => String::from("S"),
-        LowerVowelsUpperConsonants => String::from("V"),
-        ShiftAllKeyboardRight => String::from("R"),
-        ShiftAllKeyboardLeft => String::from("L"),
         ToggleCase(n) => String::from("T") + show_num(n).as_str(),
-        ToggleShift(n) => String::from("W") + show_num(n).as_str(),
         Reverse => String::from("r"),
         Duplicate => String::from("d"),
+        DupWordNTimes(n) => String::from("p") + show_num(n).as_str(),
         Reflect => String::from("f"),
         RotLeft => String::from("{"),
         RotRight => String::from("}"),
         Append(x) => String::from("$") + show_char(*x).as_str(),
-        Prefix(x) => String::from("^") + show_char(*x).as_str(),
-        InsertString(n, s) => String::from("A") + show_num(n).as_str() + show_string(s).as_str(),
-        Truncate(n) => String::from("'") + show_num(n).as_str(),
-        Pluralize => String::from("p"),
-        PastTense => String::from("P"),
-        Genitive => String::from("I"),
         DeleteFirst => String::from("["),
         DeleteLast => String::from("]"),
         DeleteAt(n) => String::from("D") + show_num(n).as_str(),
         Extract(n, m) => String::from("x") + show_num(n).as_str() + show_num(m).as_str(),
+        OmitRange(n, m) => String::from("O") + show_num(n).as_str() + show_num(m).as_str(),
         InsertChar(n, c) => String::from("i") + show_num(n).as_str() + show_char(*c).as_str(),
         Overstrike(n, c) => String::from("o") + show_num(n).as_str() + show_char(*c).as_str(),
-        Memorize => String::from("M"),
+        Truncate(n) => String::from("'") + show_num(n).as_str(),
+        ReplaceAll(cc, c) => String::from("s") + show_cs(cc).as_str() + show_char(*c).as_str(),
+        PurgeAll(cc) => String::from("@") + show_cs(cc).as_str(),
+        DupeFirstChar(n) => String::from("z") + show_num(n).as_str(),
+        DupeLastChar(n) => String::from("Z") + show_num(n).as_str(),
+        DupeAllChar => String::from("q"),
         ExtractInsert(n, m, o) => {
             String::from("X") + show_num(n).as_str() + show_num(m).as_str() + show_num(o).as_str()
         }
+        AppendMemory => String::from("4"),
+        PrependMemory => String::from("6"),
+        Memorize => String::from("M"),
+        BitshiftLeft(n) => String::from("L") + show_num(n).as_str(),
+        BitshiftRight(n) => String::from("R") + show_num(n).as_str(),
+        SwapFirstTwo => String::from("k"),
+        SwapLastTwo => String::from("K"),
+        Swap(n, m) => String::from("*") + show_num(n).as_str() + show_num(m).as_str(),
+        Increment(n) => String::from("+") + show_num(n).as_str(),
+        Decrement(n) => String::from("-") + show_num(n).as_str(),
+        ReplaceWithNext(n) => String::from(".") + show_num(n).as_str(),
+        ReplaceWithPrior(n) => String::from(",") + show_num(n).as_str(),
+        DupFirstString(n) => String::from("y") + show_num(n).as_str(),
+        DupLastString(n) => String::from("Y") + show_num(n).as_str(),
+        TitleCase(cc) => String::from("E") + show_cs(cc).as_str(),
+
+        // john only
+        ShiftAllKeyboardLeft => String::from("L"),
+        ShiftAllKeyboardRight => String::from("R"),
+        ShiftAll => String::from("S"),
+        LowerVowelsUpperConsonants => String::from("V"),
+        ToggleShift(n) => String::from("W") + show_num(n).as_str(),
+        Prefix(x) => String::from("^") + show_char(*x).as_str(),
+        InsertString(n, s) => String::from("A") + show_num(n).as_str() + show_string(s).as_str(),
+        Pluralize => String::from("p"),
+        PastTense => String::from("P"),
+        Genitive => String::from("I"),
         MemoryAssign(uv, n, m) => {
             String::from("v")
                 + show_uservar(uv).as_str()
                 + show_num(n).as_str()
                 + show_num(m).as_str()
         }
-        ReplaceAll(cc, c) => String::from("s") + show_cs(cc).as_str() + show_char(*c).as_str(),
-        PurgeAll(cc) => String::from("@") + show_cs(cc).as_str(),
-        TitleCase(cc) => String::from("E") + show_cs(cc).as_str(),
-        DupWordNTimes(n) => String::from("p") + show_num(n).as_str(),
-        BitshiftRight(n) => String::from("R") + show_num(n).as_str(),
-        BitshiftLeft(n) => String::from("L") + show_num(n).as_str(),
-        SwapFirstTwo => String::from("k"),
-        SwapLastTwo => String::from("K"),
-        Swap(n, m) => String::from("*") + show_num(n).as_str() + show_num(m).as_str(),
-        Increment(n) => String::from("+") + show_num(n).as_str(),
-        Decrement(n) => String::from("-") + show_num(n).as_str(),
-        AppendMemory => String::from("4"),
-        PrependMemory => String::from("6"),
-        OmitRange(n, m) => String::from("O") + show_num(n).as_str() + show_num(m).as_str(),
-        DupeFirstChar(n) => String::from("z") + show_num(n).as_str(),
-        DupeLastChar(n) => String::from("Z") + show_num(n).as_str(),
-        ReplaceWithNext(n) => String::from(".") + show_num(n).as_str(),
-        ReplaceWithPrior(n) => String::from(",") + show_num(n).as_str(),
-        DupFirstString(n) => String::from("y") + show_num(n).as_str(),
-        DupLastString(n) => String::from("Y") + show_num(n).as_str(),
-        DupeAllChar => String::from("q"),
+    }
+}
+
+fn support_commandrule(r: &CommandRule) -> ToolSupport {
+    use CommandRule::*;
+    match r {
+        ShiftAllKeyboardLeft
+        | ShiftAllKeyboardRight
+        | ShiftAll
+        | LowerVowelsUpperConsonants
+        | ToggleShift(_)
+        | Prefix(_)
+        | InsertString(_, _)
+        | Pluralize
+        | PastTense
+        | Genitive
+        | MemoryAssign(_, _, _) => ToolSupport::JtR,
+        _ => ToolSupport::Both,
+    }
+}
+
+pub fn john_rule(r: &Rule) -> bool {
+    match r {
+        Rule::Reject(_) => true,
+        Rule::Command(r) => support_commandrule(r) != ToolSupport::Hashcat
+    }
+}
+
+pub fn hashcat_rule(r: &Rule) -> bool {
+    match r {
+        Rule::Reject(_) => true,
+        Rule::Command(r) => support_commandrule(r) != ToolSupport::JtR
     }
 }
 

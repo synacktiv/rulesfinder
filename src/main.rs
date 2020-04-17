@@ -53,8 +53,8 @@ fn sub_set(a: &Vec<u64>, b: &Vec<u64>) -> Vec<u64> {
     let mut ma = ai.next();
     let mut mb = bi.next();
     loop {
-        match(ma, mb) {
-            (Some(cura), Some(curb)) =>
+        match (ma, mb) {
+            (Some(cura), Some(curb)) => {
                 if cura == curb {
                     // skip
                     ma = ai.next();
@@ -64,7 +64,8 @@ fn sub_set(a: &Vec<u64>, b: &Vec<u64>) -> Vec<u64> {
                 } else {
                     o.push(*cura);
                     ma = ai.next();
-                },
+                }
+            }
             (None, _) => break,
             (Some(cura), None) => {
                 o.push(*cura);
@@ -119,9 +120,28 @@ fn main() {
             .value_name("N")
             .help("Minimum size of wordlists fragments (default 4)")
             .takes_value(true))
+        .arg(Arg::with_name("hashcat")
+            .long("hashcat")
+            .help("Only use rules that work in Hashcat")
+            .takes_value(false))
+        .arg(Arg::with_name("details")
+            .long("details")
+            .help("Print statistics in the rule output")
+            .takes_value(false))
         .get_matches();
 
-    let allrules = rules::genmutate();
+    let hashcat_mode = matches.is_present("hashcat");
+    let details_mode = matches.is_present("details");
+    let allrules = rules::genmutate()
+        .into_iter()
+        .filter(|rs| {
+            if hashcat_mode {
+                rs.iter().all(rules::hashcat_rule)
+            } else {
+                rs.iter().all(rules::john_rule)
+            }
+        })
+        .collect::<Vec<_>>();
     let minsize = match matches.value_of("minsize") {
         Some(ms) => ms.parse::<usize>().unwrap(),
         None => 4,
@@ -227,12 +247,16 @@ fn main() {
         if best_count > 0 {
             total_cracked += best_count;
             // do not print the final loop, where 'hits' is empty and nothing was found!
-            println!(
-                "{} // [{} - {}]",
-                rules::show_rules(&best_rules),
-                best_count,
-                total_cracked
-            );
+            if details_mode {
+                println!(
+                    "{} // [{} - {}]",
+                    rules::show_rules(&best_rules),
+                    best_count,
+                    total_cracked
+                );
+            } else {
+                println!("{}", rules::show_rules(&best_rules));
+            }
         }
     }
     // without this, it takes a long time to free the large "hits" hashmap
