@@ -86,14 +86,9 @@ mod tests {
         cleartexts::process_line(&mut clears, 3, &conv("CBA"), 3);
         cleartexts::process_line(&mut clears, 4, &conv("0009lah"), 3);
 
-        let mut s01 = BTreeSet::new();
-        s01.insert(0);
-        s01.insert(1);
-        let mut s2 = BTreeSet::new();
-        s2.insert(2);
-        let mut s34 = BTreeSet::new();
-        s34.insert(3);
-        s34.insert(4);
+        let s01 = vec![0, 1];
+        let mut s2 = vec![2];
+        let mut s34 = vec![3, 4];
 
         let res_noop = worker_logic(vec![], &wordlist, &clears, 1);
         let mut expected = HashMap::new();
