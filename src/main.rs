@@ -41,8 +41,8 @@ fn read_wordlist(wordlist: &str) -> Vec<Vec<u8>> {
 }
 
 fn shorter_rules(a: &Vec<rules::Rule>, b: &Vec<rules::Rule>) -> bool {
-    let la = rules::show_rules(a).len();
-    let lb = rules::show_rules(b).len();
+    let la = rules::show_rules(a, false).len();
+    let lb = rules::show_rules(b, false).len();
     la < lb || (la == lb && a < b)
 }
 
@@ -250,12 +250,12 @@ fn main() {
             if details_mode {
                 println!(
                     "{} // [{} - {}]",
-                    rules::show_rules(&best_rules),
+                    rules::show_rules(&best_rules, hashcat_mode),
                     best_count,
                     total_cracked
                 );
             } else {
-                println!("{}", rules::show_rules(&best_rules));
+                println!("{}", rules::show_rules(&best_rules, hashcat_mode));
             }
         }
     }

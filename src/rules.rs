@@ -826,7 +826,7 @@ pub fn mutate(word: &[u8], rules: &[Rule]) -> Option<Vec<u8>> {
     Some(cur)
 }
 
-pub fn show_command(cmd: &CommandRule) -> String {
+pub fn show_command(cmd: &CommandRule, hashcat_mode: bool) -> String {
     use CommandRule::*;
     match cmd {
         // common
@@ -883,7 +883,35 @@ pub fn show_command(cmd: &CommandRule) -> String {
         LowerVowelsUpperConsonants => String::from("V"),
         ToggleShift(n) => String::from("W") + show_num(n).as_str(),
         Prefix(x) => String::from("^") + show_char(*x).as_str(),
-        InsertString(n, s) => String::from("A") + show_num(n).as_str() + show_string(s).as_str(),
+        InsertString(n, s) => {
+            // compatibility mode for Hashcat
+            if hashcat_mode {
+                let mut o = String::new();
+                match n {
+                    Numerical::Val(0) => {
+                        for c in s.iter().rev() {
+                            o.push('^');
+                            o.push_str(show_char(*c).as_str());
+                        }
+                    }
+                    Numerical::Infinite => {
+                        for c in s.iter() {
+                            o.push('$');
+                            o.push_str(show_char(*c).as_str());
+                        }
+                    }
+                    _ => {
+                        // this should not happen as InsertString rules are not generated, and can
+                        // only be caused by the worker_logic command.
+                        println!("unhandled command: {:?}", cmd);
+                        o = String::from("UNHANDLED");
+                    }
+                }
+                o
+            } else {
+                String::from("A") + show_num(n).as_str() + show_string(s).as_str()
+            }
+        }
         Pluralize => String::from("p"),
         PastTense => String::from("P"),
         Genitive => String::from("I"),
@@ -917,14 +945,14 @@ fn support_commandrule(r: &CommandRule) -> ToolSupport {
 pub fn john_rule(r: &Rule) -> bool {
     match r {
         Rule::Reject(_) => true,
-        Rule::Command(r) => support_commandrule(r) != ToolSupport::Hashcat
+        Rule::Command(r) => support_commandrule(r) != ToolSupport::Hashcat,
     }
 }
 
 pub fn hashcat_rule(r: &Rule) -> bool {
     match r {
         Rule::Reject(_) => true,
-        Rule::Command(r) => support_commandrule(r) != ToolSupport::JtR
+        Rule::Command(r) => support_commandrule(r) != ToolSupport::JtR,
     }
 }
 
@@ -1060,25 +1088,25 @@ pub fn show_reject(rej: &RejectRule) -> String {
     }
 }
 
-pub fn show_rule(rule: &Rule) -> String {
+pub fn show_rule(rule: &Rule, hashcat_mode: bool) -> String {
     match rule {
-        Rule::Command(cmd) => show_command(cmd),
+        Rule::Command(cmd) => show_command(cmd, hashcat_mode),
         Rule::Reject(rej) => show_reject(rej),
     }
 }
 
-pub fn show_rules(rules: &[Rule]) -> String {
+pub fn show_rules(rules: &[Rule], hashcat_mode: bool) -> String {
     let mut o = String::new();
     for rule in rules {
-        o += show_rule(rule).as_str();
+        o += show_rule(rule, hashcat_mode).as_str();
     }
     o
 }
 
-pub fn show_commands(rules: &[CommandRule]) -> String {
+pub fn show_commands(rules: &[CommandRule], hashcat_mode: bool) -> String {
     let mut o = String::new();
     for rule in rules {
-        o += show_command(rule).as_str();
+        o += show_command(rule, hashcat_mode).as_str();
     }
     o
 }
