@@ -12,7 +12,7 @@ You need the rust toolchain to build this tool.
 
 ```
 cargo build --release
-ulimit -m 8192  # limit memory usage to 8G
+ulimit -d 8388608  # limit memory usage to 8GBB
 target/release/johnrules -w path/to/wordlist --cleartexts path/to/cleartexts -n 50 -t 7 --minsize 3 | tee result
 ```
 
@@ -41,14 +41,14 @@ All measurements have been conducted using a cleartext database of 1642068 passw
 | 102774 `[1]` | 5                      | 100    | 6GB          | 89s      | 464         | 135873                      |
 | 303872          | 5                      | 100    | 7.5GB        | 346s     | 889         | 361561                      |
 
-`[1]`: this is an outlier, because I used a generic spellchecking dictionnary instead of a dictionnary specilized for password cracking.
+`[1]`: this is an outlier, because I used a generic spellchecking dictionary instead of something meant for password cracking.
 
 The processing is two parts:
 
- * the first part, that is the most memory intensive, is exclusively influenced by the size of the cleartext corpus ;
- * the second part is, all other parameters being the same, roughly proportional in time spent and memory used to the size of the dictionnary.
+ * the first part, that is the most memory intensive, is exclusively influenced by the size of the cleartext corpus and minimum substring size ;
+ * the second part is influenced by all parameters, but, all other parameters being the same, roughly proportional in time spent and memory used to the size of the dictionary.
 
-The above *estimated passwords cracked* column is the amount of passwords in the cleartext corpus that would have been cracked with the generated rules using the given dictionnary.
+The above *estimated passwords cracked* column is the amount of passwords in the cleartext corpus that would have been cracked with the generated rules using the given dictionary.
 As with all things machine learning it does not directly reflect the ruleset performance.
 Increasing this value mindlessly will be counter productive, as it will lead to:
 
@@ -59,5 +59,5 @@ As a rule of thumb, I recommend:
 
  * having a a minimum substring size of 4 or 5 ;
  * only using real passwords in the cleartext corpus ;
- * using dictionnaries you will actually use during a cracking session. That means short dictionnaries for rules meant for hard hashes, and long dictionnaries for rules meant for fast hashes.
+ * using dictionnaries you will actually use during a cracking session. That means short dictionnaries for rules you will use against hard hashes, and long dictionnaries for rules you will use against fast hashes.
 
