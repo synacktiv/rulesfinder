@@ -22,7 +22,7 @@ Beware, this program can use a lot of memory very quickly!
 
 ## What is it?
 
-A long form article will soon be published.
+A long form article can be [read here](https://www.synacktiv.com/posts/tool/rulesfinder-automatically-create-good-password-cracking-rulesets.html). It explains what the idea behind the tool is, and what it does.
 
 ## Performance
 
