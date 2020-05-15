@@ -1,5 +1,7 @@
 extern crate clap;
 extern crate crossbeam;
+#[macro_use]
+extern crate lazy_static;
 
 use clap::{App, Arg};
 use indicatif::ProgressBar;
@@ -14,6 +16,11 @@ use std::thread;
 mod cleartexts;
 mod matcher;
 mod rules;
+
+
+lazy_static! {
+    static ref CONVS: rules::Converts = rules::make_converts();
+}
 
 fn worker_thread(
     r: crossbeam::channel::Receiver<Vec<rules::Rule>>,
