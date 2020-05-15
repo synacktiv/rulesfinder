@@ -47,7 +47,7 @@ pub struct Converts {
     cvowels: [u8; 256],
 }
 
-fn make_converts() -> Converts {
+pub fn make_converts() -> Converts {
     Converts {
         cshift: rules_init_conv(CONV_SOURCE, CONV_SHIFT),
         cinvert: rules_init_conv(CONV_SOURCE, CONV_INVERT),
@@ -465,7 +465,7 @@ pub fn mutate(word: &[u8], rules: &[Rule]) -> Option<Vec<u8>> {
         savedlen: word.len() as u8,
         lastfound: 0,
     };
-    let convs = make_converts();
+    let convs = &super::CONVS;
     let mut cur = word.to_vec();
     for r in rules {
         let curlength = cur.len();
