@@ -8,12 +8,18 @@ The tool is currently alpha quality.
 
 ## tl;dr
 
-You need the rust toolchain to build this tool.
+You need the rust toolchain to build this tool. You can either directly install:
 
 ```
-cargo build --release
+cargo install --git https://github.com/synacktiv/rulesfinder
 ulimit -d 8388608  # limit memory usage to 8GBB
-target/release/johnrules -w path/to/wordlist --cleartexts path/to/cleartexts -n 50 -t 7 --minsize 3 | tee result
+rulesfinder -w path/to/wordlist --cleartexts path/to/cleartexts -n 50 -t 7 --minsize 3 | tee result
+```
+
+Or, after cloning this repository:
+```
+ulimit -d 8388608  # limit memory usage to 8GBB
+cargo run --release --  -w path/to/wordlist --cleartexts path/to/cleartexts -n 50 -t 7 --minsize 3 | tee result
 ```
 
 Here, `50` is the cutoff value, meaning that a rule has to crack at least 50 passwords to be kept, and 7 is the number of threads.
