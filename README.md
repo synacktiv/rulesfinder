@@ -2,7 +2,7 @@
 
 Machine-learn password mangling rules!
 
-This tool finds efficient password mangling rules (for John the Ripper or Hashcat) for a given dictionnary and a list of passwords.
+This tool finds efficient password mangling rules (for John the Ripper or Hashcat) for a given dictionary and a list of passwords.
 
 The tool is currently alpha quality.
 
@@ -65,5 +65,5 @@ As a rule of thumb, I recommend:
 
  * having a a minimum substring size of 4 or 5 ;
  * only using real passwords in the cleartext corpus ;
- * using dictionnaries you will actually use during a cracking session. That means short dictionnaries for rules you will use against hard hashes, and long dictionnaries for rules you will use against fast hashes.
+ * using dictionaries you will actually use during a cracking session. That means short dictionaries for rules you will use against hard hashes, and long dictionaries for rules you will use against fast hashes.
 
