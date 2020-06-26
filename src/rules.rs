@@ -26,6 +26,8 @@ static CHARS_CONTROL_ASCII: &[u8] = &[
     0x85, 0x88, 0x8D, 0x8E, 0x8F, 0x90, 0x96, 0x97, 0x98, 0x9A, 0x9B, 0x9C, 0x9D, 0x9E, 0x9F,
 ];
 
+static STR_SEPARATORS: &[u8] = b"\"'/,;:!?.azertyuiopqsdfghjklmwxcvbn";
+
 fn rules_init_conv(ssrc: &str, sdst: &str) -> [u8; 256] {
     let mut out = [0; 256];
     let src = ssrc.as_bytes();
@@ -997,11 +999,17 @@ pub fn show_char(c: u8) -> String {
 
 pub fn show_string(x: &[u8]) -> String {
     let mut o = String::new();
-    o.push('"');
-    for c in x {
-        o.push(*c as char);
+    let msep = STR_SEPARATORS.into_iter().find(|&c| !x.contains(c));
+    match msep {
+        None => panic!("Should not happen, did not find a separator"),
+        Some(sep) => {
+            o.push(*sep as char);
+            for c in x {
+                o.push(*c as char);
+            }
+            o.push(*sep as char);
+        }
     }
-    o.push('"');
     o
 }
 
@@ -1244,7 +1252,7 @@ pub fn genmutate() -> Vec<Vec<Rule>> {
 }
 
 #[cfg(test)]
-mod tests {
+mod mutate {
     use super::*;
     use std::str;
     use CharClass::*;
@@ -1534,6 +1542,30 @@ mod tests {
             DEFPWD,
             &vec![PurgeAll(OneOf(CCPunctuation))],
             "aSQdqdf354gdrfé&",
+        );
+    }
+}
+
+#[cfg(test)]
+mod display {
+    use super::*;
+    use std::str;
+    use CharClass::*;
+    use CharSelector::*;
+    use CommandRule::*;
+    use Numerical::*;
+
+    #[test]
+    fn append_str() {
+        assert_eq!(
+            show_command(&InsertString(Val(0), Vec::from("lol".as_bytes())), false),
+            "A0\"lol\""
+        );
+    }
+    fn append_str_del1() {
+        assert_eq!(
+            show_command(&InsertString(Val(0), Vec::from("lo\"l".as_bytes())), false),
+            "A0'lo\"l'"
         );
     }
 }
