@@ -219,6 +219,10 @@ fn main() {
     }
     progress.finish();
 
+    if !hashcat_mode {
+        println!("!! hashcat logic ON");
+    }
+
     // greedy coverage
     let mut last_set: Vec<u64> = Vec::new();
     let mut total_cracked = 0;
@@ -266,6 +270,11 @@ fn main() {
             }
         }
     }
+
+    if !hashcat_mode {
+        println!("!! hashcat logic OFF");
+    }
+
     // without this, it takes a long time to free the large "hits" hashmap
     std::process::exit(0);
 }
