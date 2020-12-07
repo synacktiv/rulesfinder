@@ -988,7 +988,7 @@ pub fn show_char(c: u8) -> String {
         o.push(c as char);
         return o;
     }
-    let h = format!("{:x}", c);
+    let h = format!("{:X}", c);
     let mut o = String::from("\\x");
     if h.len() == 1 {
         o.push('0');
