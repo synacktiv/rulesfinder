@@ -91,7 +91,7 @@ mod tests {
     #[test]
     fn test1() {
         let mut out = HashMap::new();
-        let inserted = process_line(&mut out, 0, &"ABCDEF".as_bytes().to_vec(), 3);
+        let _inserted = process_line(&mut out, 0, &"ABCDEF".as_bytes().to_vec(), 3);
         let expected: &[(&str, (&str, &str))] = &[
             ("ABCDEF", ("", "")),
             ("ABCDE", ("", "F")),
@@ -104,7 +104,7 @@ mod tests {
             ("CDE", ("AB", "F")),
             ("DEF", ("ABC", "")),
         ];
-        for (k, tpl) in expected {
+        for (k, _tpl) in expected {
             let kv: Vec<u8> = k.as_bytes().to_vec();
             match out.get(&kv) {
                 None => panic!("Could not find match {}", k),
