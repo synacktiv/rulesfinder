@@ -1,4 +1,3 @@
-use rand;
 use std::collections::HashMap;
 
 #[derive(Hash, Eq, PartialEq, Debug, Clone, PartialOrd)]
@@ -59,6 +58,7 @@ pub fn make_converts() -> Converts {
     }
 }
 
+#[allow(dead_code)]
 #[derive(Hash, Eq, PartialEq, Debug, Clone, PartialOrd)]
 pub enum UserVar {
     UVA,
@@ -74,6 +74,7 @@ pub enum UserVar {
     UVK,
 }
 
+#[allow(dead_code)]
 fn rand_uservar<T: rand::Rng>(rng: &mut T) -> UserVar {
     use UserVar::*;
     match rng.gen_range(0, 11) {
@@ -91,6 +92,7 @@ fn rand_uservar<T: rand::Rng>(rng: &mut T) -> UserVar {
     }
 }
 
+#[allow(dead_code)]
 #[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd)]
 pub enum Numerical {
     Val(u8),
@@ -107,6 +109,7 @@ pub enum Numerical {
     Infinite,
 }
 
+#[allow(dead_code)]
 fn rand_numerical<T: rand::Rng>(rng: &mut T) -> Numerical {
     use Numerical::*;
     match rng.gen_range(0, 30) {
@@ -125,6 +128,7 @@ fn rand_numerical<T: rand::Rng>(rng: &mut T) -> Numerical {
     }
 }
 
+#[allow(dead_code)]
 #[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd)]
 pub enum RejectRule {
     Noop,
@@ -166,6 +170,7 @@ fn rand_charselector<T: rand::Rng>(rng: &mut T) -> CharSelector {
     }
 }
 
+#[allow(dead_code)]
 #[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd)]
 pub enum CharClass {
     CCVowels,
@@ -185,6 +190,7 @@ pub enum CharClass {
     CCSingle(u8), // TODO: user defined
 }
 
+#[allow(dead_code)]
 fn rand_charclass<T: rand::Rng>(rng: &mut T) -> CharClass {
     use CharClass::*;
     match rng.gen_range(0, 20) {
@@ -205,6 +211,7 @@ fn rand_charclass<T: rand::Rng>(rng: &mut T) -> CharClass {
     }
 }
 
+#[allow(dead_code)]
 #[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd)]
 pub enum CommandRule {
     Noop,
@@ -265,6 +272,7 @@ pub enum CommandRule {
                                                  // TitleSep - eX - hashcat only
 }
 
+#[allow(dead_code)]
 fn rand_commandrule<T: rand::Rng>(rng: &mut T) -> CommandRule {
     use CommandRule::*;
     match rng.gen_range(0, 29) {
@@ -324,6 +332,7 @@ fn rand_commandrule<T: rand::Rng>(rng: &mut T) -> CommandRule {
     }
 }
 
+#[allow(dead_code)]
 pub fn rand_commandrules() -> Vec<CommandRule> {
     use rand::Rng;
     let mut o = Vec::new();
@@ -348,6 +357,7 @@ pub fn rand_commandrules() -> Vec<CommandRule> {
     o
 }
 
+#[allow(dead_code)]
 #[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd)]
 pub enum Rule {
     Reject(RejectRule),
@@ -393,12 +403,12 @@ fn check_class(c: u8, cl: &CharClass) -> bool {
         CCWhitespace => CHARS_WHITESPACE.contains(&c),
         CCPunctuation => CHARS_PUNCTUATION.contains(&c),
         CCSymbols => CHARS_SPECIALS.contains(&c),
-        CCLower => c >= b'a' && c <= b'z',
-        CCUpper => c >= b'A' && c <= b'Z',
-        CCDigits => c >= b'0' && c <= b'9',
-        CCLetters => (c >= b'a' && c <= b'z') || (c >= b'A' && c <= b'Z'),
+        CCLower => (b'a'..=b'z').contains(&c),
+        CCUpper => (b'A'..=b'Z').contains(&c),
+        CCDigits => (b'0'..=b'9').contains(&c),
+        CCLetters => (b'a'..=b'z').contains(&c) || (b'A'..=b'Z').contains(&c),
         CCAlphaNum => {
-            (c >= b'a' && c <= b'z') || (c >= b'A' && c <= b'Z') || (c >= b'0' && c <= b'9')
+            (b'a'..=b'z').contains(&c) || (b'A'..=b'Z').contains(&c) || (b'0'..=b'9').contains(&c)
         }
         CCControl => CHARS_CONTROL_ASCII.contains(&c),
         CCAll => true,
@@ -515,8 +525,8 @@ pub fn mutate(word: &[u8], rules: &[Rule]) -> Option<Vec<u8>> {
                     }
                     RotLeft => cur.rotate_left(1),
                     RotRight => cur.rotate_right(1),
-                    Append(c) => cur.push(c.clone()),
-                    Prefix(c) => cur.insert(0, c.clone()),
+                    Append(c) => cur.push(*c),
+                    Prefix(c) => cur.insert(0, *c),
                     InsertString(n, s) => {
                         let pos = eval_length(n, &env) as usize;
                         let after = cur.split_off(pos);
@@ -660,8 +670,8 @@ pub fn mutate(word: &[u8], rules: &[Rule]) -> Option<Vec<u8>> {
                     DupeAllChar => {
                         let mut nv = Vec::new();
                         for c in cur.iter() {
-                            nv.push(c.clone());
-                            nv.push(c.clone());
+                            nv.push(*c);
+                            nv.push(*c);
                         }
                         cur = nv;
                     }
@@ -743,26 +753,17 @@ pub fn mutate(word: &[u8], rules: &[Rule]) -> Option<Vec<u8>> {
                             || (last_letter == 'h' && (prev_letter == 'c' || prev_letter == 's'))
                         {
                             cur.push(b'e');
-                            cur.push(b's');
                         } else if last_letter == 'f' && prev_letter != 'f' {
                             cur[curlength - 1] = b'v';
                             cur.push(b'e');
-                            cur.push(b's');
                         } else if last_letter == 'e' && prev_letter == 'f' {
                             cur[curlength - 2] = b'v';
                             cur[curlength - 1] = b'e';
-                            cur.push(b's');
-                        } else if last_letter == 'y' {
-                            if is_vowel_no_y(prev_letter) {
-                                cur.push(b's');
-                            } else {
-                                cur[curlength - 1] = b'i';
-                                cur.push(b'e');
-                                cur.push(b's');
-                            }
-                        } else {
-                            cur.push(b's');
+                        } else if last_letter == 'y' && !is_vowel_no_y(prev_letter) {
+                            cur[curlength - 1] = b'i';
+                            cur.push(b'e');
                         }
+                        cur.push(b's');
                     }
                     PastTense => {
                         if curlength < 3 {
@@ -778,12 +779,10 @@ pub fn mutate(word: &[u8], rules: &[Rule]) -> Option<Vec<u8>> {
                             } else if is_bgp(last_letter) && !is_bgp(prev_letter) {
                                 cur.push(raw_last_letter);
                             }
-                            if last_letter == 'e' {
-                                cur.push(b'd');
-                            } else {
+                            if last_letter != 'e' {
                                 cur.push(b'e');
-                                cur.push(b'd');
                             }
+                            cur.push(b'd');
                         }
                     }
                     Genitive => {
@@ -797,16 +796,14 @@ pub fn mutate(word: &[u8], rules: &[Rule]) -> Option<Vec<u8>> {
                         if last_letter != 'g' || prev_letter != 'n' || pprev_letter != 'i' {
                             if is_vowel_no_y(last_letter) {
                                 cur[curlength - 1] = b'i';
-                                cur.push(b'n');
-                                cur.push(b'g');
                             } else {
                                 if is_bgp(last_letter) && !is_bgp(prev_letter) {
                                     cur.push(raw_last_letter);
                                 }
                                 cur.push(b'i');
-                                cur.push(b'n');
-                                cur.push(b'g');
                             }
+                            cur.push(b'n');
+                            cur.push(b'g');
                         }
                     }
                     TitleCase(cl) => {
@@ -983,7 +980,7 @@ pub fn show_num(n: &Numerical) -> String {
 }
 
 pub fn show_char(c: u8) -> String {
-    if (c >= b'0' && c <= b'9') || (c >= b'A' && c <= b'Z') || (c >= b'a' && c <= b'z') {
+    if (b'0'..=b'9').contains(&c) || (b'A'..=b'Z').contains(&c) || (b'a'..=b'z').contains(&c) {
         let mut o = String::new();
         o.push(c as char);
         return o;
@@ -999,7 +996,7 @@ pub fn show_char(c: u8) -> String {
 
 pub fn show_string(x: &[u8]) -> String {
     let mut o = String::new();
-    let msep = STR_SEPARATORS.into_iter().find(|&c| !x.contains(c));
+    let msep = STR_SEPARATORS.iter().find(|&c| !x.contains(c));
     match msep {
         None => panic!("Should not happen, did not find a separator"),
         Some(sep) => {
@@ -1111,6 +1108,7 @@ pub fn show_rules(rules: &[Rule], hashcat_mode: bool) -> String {
     o
 }
 
+#[allow(dead_code)]
 pub fn show_commands(rules: &[CommandRule], hashcat_mode: bool) -> String {
     let mut o = String::new();
     for rule in rules {
@@ -1273,72 +1271,72 @@ mod mutate {
             None => panic!("no results"),
             Some(r) => match str::from_utf8(&r) {
                 Ok(actual) => assert_eq!(actual, expected),
-                Err(fail) => panic!(fail),
+                Err(fail) => panic!("{}", fail),
             },
         }
     }
 
     #[test]
     fn noop() {
-        mut_test("lol", &vec![Noop], "lol");
+        mut_test("lol", &[Noop], "lol");
     }
     #[test]
     fn tolower() {
-        mut_test("lOl1", &vec![ToLower], "lol1");
+        mut_test("lOl1", &[ToLower], "lol1");
     }
     #[test]
     fn toupper() {
-        mut_test("lOl1", &vec![ToUpper], "LOL1");
+        mut_test("lOl1", &[ToUpper], "LOL1");
     }
     #[test]
     fn capitalize() {
-        mut_test("lOl1", &vec![ToUpper], "LOL1");
+        mut_test("lOl1", &[ToUpper], "LOL1");
     }
     #[test]
     fn toggleall() {
-        mut_test(DEFPWD, &vec![ToggleAll], "AsqDQDF354GDRF;:;é&");
+        mut_test(DEFPWD, &[ToggleAll], "AsqDQDF354GDRF;:;é&");
     }
     #[test]
     fn dup_word_n_times() {
-        mut_test("P@ss", &vec![DupWordNTimes(Val(3))], "P@ssP@ssP@ss");
+        mut_test("P@ss", &[DupWordNTimes(Val(3))], "P@ssP@ssP@ss");
     }
     #[test]
     fn bitshift_right() {
-        mut_test("P@ss", &vec![BitshiftRight(Val(2))], "P@9s");
+        mut_test("P@ss", &[BitshiftRight(Val(2))], "P@9s");
     }
     #[test]
     fn bitshift_left() {
-        mut_test("P0ss", &vec![BitshiftLeft(Val(1))], "P`ss");
+        mut_test("P0ss", &[BitshiftLeft(Val(1))], "P`ss");
     }
     #[test]
     fn swap_first_two() {
-        mut_test("P@ss", &vec![SwapFirstTwo], "@Pss");
+        mut_test("P@ss", &[SwapFirstTwo], "@Pss");
     }
     #[test]
     fn swap_last_two() {
-        mut_test("P@sS", &vec![SwapLastTwo], "P@Ss");
+        mut_test("P@sS", &[SwapLastTwo], "P@Ss");
     }
     #[test]
     fn swap() {
         mut_test(
             "P@sS",
-            &vec![Memorize, Swap(Val(0), WordLastCharPos)],
+            &[Memorize, Swap(Val(0), WordLastCharPos)],
             "S@sP",
         );
     }
     #[test]
     fn increment() {
-        mut_test("P@ss", &vec![Increment(Val(1))], "PAss");
+        mut_test("P@ss", &[Increment(Val(1))], "PAss");
     }
     #[test]
     fn decrement() {
-        mut_test("P@ss", &vec![Decrement(Val(1))], "P?ss");
+        mut_test("P@ss", &[Decrement(Val(1))], "P?ss");
     }
     #[test]
     fn append_memory() {
         mut_test(
             "P@ss",
-            &vec![ToUpper, Memorize, ToLower, AppendMemory],
+            &[ToUpper, Memorize, ToLower, AppendMemory],
             "p@ssP@SS",
         );
     }
@@ -1346,109 +1344,109 @@ mod mutate {
     fn prepend_memory() {
         mut_test(
             "P@ss",
-            &vec![ToUpper, Memorize, ToLower, PrependMemory],
+            &[ToUpper, Memorize, ToLower, PrependMemory],
             "P@SSp@ss",
         );
     }
     #[test]
     fn dupe_first_char() {
-        mut_test("P@ss", &vec![DupeFirstChar(Val(2))], "PPP@ss");
+        mut_test("P@ss", &[DupeFirstChar(Val(2))], "PPP@ss");
     }
     #[test]
     fn dupe_last_char() {
-        mut_test("P@sS", &vec![DupeLastChar(Val(2))], "P@sSSS");
+        mut_test("P@sS", &[DupeLastChar(Val(2))], "P@sSSS");
     }
     #[test]
     fn dupe_all_char() {
-        mut_test("P@sS", &vec![DupeAllChar], "PP@@ssSS");
+        mut_test("P@sS", &[DupeAllChar], "PP@@ssSS");
     }
     #[test]
     fn reverse_t() {
-        mut_test("Fred", &vec![Reverse], "derF");
+        mut_test("Fred", &[Reverse], "derF");
     }
     #[test]
     fn duplicate() {
-        mut_test("Fred", &vec![Duplicate], "FredFred");
+        mut_test("Fred", &[Duplicate], "FredFred");
     }
     #[test]
     fn reflect() {
-        mut_test("Fred", &vec![Reflect], "FredderF");
+        mut_test("Fred", &[Reflect], "FredderF");
     }
     #[test]
     fn rotl() {
-        mut_test("jsmith", &vec![RotLeft], "smithj");
+        mut_test("jsmith", &[RotLeft], "smithj");
     }
     #[test]
     fn rotr() {
-        mut_test("smithj", &vec![RotRight], "jsmith");
+        mut_test("smithj", &[RotRight], "jsmith");
     }
     #[test]
     fn shiftall() {
-        mut_test(DEFPWD, &vec![ShiftAll], "AsqDQDF#%$GDRF:;:é7");
+        mut_test(DEFPWD, &[ShiftAll], "AsqDQDF#%$GDRF:;:é7");
     }
     #[test]
     fn rule_v() {
         mut_test(
             DEFPWD,
-            &vec![LowerVowelsUpperConsonants],
+            &[LowerVowelsUpperConsonants],
             "aSQDQDF354GDRF;:;é&",
         );
     }
     #[test]
     fn shift_k_r() {
-        mut_test(DEFPWD, &vec![ShiftAllKeyboardRight], "sDWfwfg465hftg'\"'é*");
+        mut_test(DEFPWD, &[ShiftAllKeyboardRight], "sDWfwfg465hftg'\"'é*");
     }
     #[test]
     fn shift_k_l() {
-        mut_test(DEFPWD, &vec![ShiftAllKeyboardLeft], "aAQsqsd243fsedlLlé^");
+        mut_test(DEFPWD, &[ShiftAllKeyboardLeft], "aAQsqsd243fsedlLlé^");
     }
     #[test]
     fn omit_range() {
-        mut_test("012345678", &vec![OmitRange(Val(3), Val(4))], "01278");
+        mut_test("012345678", &[OmitRange(Val(3), Val(4))], "01278");
     }
     #[test]
     fn replace_with_next() {
-        mut_test("P@sS", &vec![ReplaceWithNext(Val(2))], "P@SS");
+        mut_test("P@sS", &[ReplaceWithNext(Val(2))], "P@SS");
     }
     #[test]
     fn replace_with_prior() {
-        mut_test("P@sS", &vec![ReplaceWithPrior(Val(2))], "P@@S");
+        mut_test("P@sS", &[ReplaceWithPrior(Val(2))], "P@@S");
     }
     #[test]
     fn duplicate_first() {
-        mut_test("P@sS", &vec![DupFirstString(Val(2))], "P@P@sS");
+        mut_test("P@sS", &[DupFirstString(Val(2))], "P@P@sS");
     }
     #[test]
     fn duplicate_last() {
-        mut_test("P@sS", &vec![DupLastString(Val(2))], "P@sSsS");
+        mut_test("P@sS", &[DupLastString(Val(2))], "P@sSsS");
     }
     #[test]
     fn title_case() {
         mut_test(
             "test word",
-            &vec![TitleCase(OneOf(CCWhitespace))],
+            &[TitleCase(OneOf(CCWhitespace))],
             "Test Word",
         );
     }
     #[test]
     fn toggle_case() {
-        mut_test(DEFPWD, &vec![ToggleCase(Val(6))], "aSQdqdF354gdrf;:;é&");
+        mut_test(DEFPWD, &[ToggleCase(Val(6))], "aSQdqdF354gdrf;:;é&");
     }
     #[test]
     fn toggle_shift() {
-        mut_test(DEFPWD, &vec![ToggleShift(Val(6))], "aSQdqdF354gdrf;:;é&");
+        mut_test(DEFPWD, &[ToggleShift(Val(6))], "aSQdqdF354gdrf;:;é&");
     }
     #[test]
     fn insert_string() {
         mut_test(
             DEFPWD,
-            &vec![InsertString(Val(3), vec![b'l', b'o', b'l'])],
+            &[InsertString(Val(3), vec![b'l', b'o', b'l'])],
             "aSQloldqdf354gdrf;:;é&",
         );
     }
     #[test]
     fn truncate() {
-        mut_test(DEFPWD, &vec![Truncate(Val(6))], "aSQdqd");
+        mut_test(DEFPWD, &[Truncate(Val(6))], "aSQdqd");
     }
     #[test]
     fn pluralize() {
@@ -1461,7 +1459,7 @@ mod mutate {
             "puves", "payes", "julies",
         ];
         for (&t, &e) in tests.iter().zip(expected.iter()) {
-            mut_test(t, &vec![Pluralize], e);
+            mut_test(t, &[Pluralize], e);
         }
     }
     #[test]
@@ -1469,7 +1467,7 @@ mod mutate {
         let tests = vec!["bed", "beg", "ped", "poe", "pid"];
         let expected = vec!["bed", "begged", "ped", "poed", "pided"];
         for (&t, &e) in tests.iter().zip(expected.iter()) {
-            mut_test(t, &vec![PastTense], e);
+            mut_test(t, &[PastTense], e);
         }
     }
     #[test]
@@ -1477,46 +1475,46 @@ mod mutate {
         let tests = vec!["ping", "pang", "poo", "pan"];
         let expected = vec!["ping", "pangging", "poing", "paning"];
         for (&t, &e) in tests.iter().zip(expected.iter()) {
-            mut_test(t, &vec![Genitive], e);
+            mut_test(t, &[Genitive], e);
         }
     }
     #[test]
     fn append() {
-        mut_test("Fred", &vec![Append(b'x')], "Fredx");
+        mut_test("Fred", &[Append(b'x')], "Fredx");
     }
     #[test]
     fn prefix() {
-        mut_test("Fred", &vec![Prefix(b'x')], "xFred");
+        mut_test("Fred", &[Prefix(b'x')], "xFred");
     }
     #[test]
     fn delete_first() {
-        mut_test("Fred", &vec![DeleteFirst], "red");
+        mut_test("Fred", &[DeleteFirst], "red");
     }
     #[test]
     fn delete_last() {
-        mut_test("Fred", &vec![DeleteLast], "Fre");
+        mut_test("Fred", &[DeleteLast], "Fre");
     }
     #[test]
     fn extract_insert() {
         mut_test(
             "p@ssW0rd",
-            &vec![ToLower, ExtractInsert(Val(4), Val(2), Val(8))],
+            &[ToLower, ExtractInsert(Val(4), Val(2), Val(8))],
             "p@ssw0rdW0",
         );
     }
     #[test]
     fn delete_at() {
-        mut_test(DEFPWD, &vec![DeleteAt(Val(4))], "aSQddf354gdrf;:;é&");
+        mut_test(DEFPWD, &[DeleteAt(Val(4))], "aSQddf354gdrf;:;é&");
     }
     #[test]
     fn extract() {
-        mut_test(DEFPWD, &vec![Extract(Val(3), Val(5))], "dqdf3");
+        mut_test(DEFPWD, &[Extract(Val(3), Val(5))], "dqdf3");
     }
     #[test]
     fn insertchar() {
         mut_test(
             DEFPWD,
-            &vec![InsertChar(Val(3), b'K')],
+            &[InsertChar(Val(3), b'K')],
             "aSQKdqdf354gdrf;:;é&",
         );
     }
@@ -1524,7 +1522,7 @@ mod mutate {
     fn overstrike() {
         mut_test(
             DEFPWD,
-            &vec![Overstrike(Val(3), b'K')],
+            &[Overstrike(Val(3), b'K')],
             "aSQKqdf354gdrf;:;é&",
         );
     }
@@ -1532,7 +1530,7 @@ mod mutate {
     fn replace_all() {
         mut_test(
             DEFPWD,
-            &vec![ReplaceAll(OneOf(CCPunctuation), b'0')],
+            &[ReplaceAll(OneOf(CCPunctuation), b'0')],
             "aSQdqdf354gdrf000é&",
         );
     }
@@ -1540,7 +1538,7 @@ mod mutate {
     fn purge_all() {
         mut_test(
             DEFPWD,
-            &vec![PurgeAll(OneOf(CCPunctuation))],
+            &[PurgeAll(OneOf(CCPunctuation))],
             "aSQdqdf354gdrfé&",
         );
     }
@@ -1549,9 +1547,6 @@ mod mutate {
 #[cfg(test)]
 mod display {
     use super::*;
-    use std::str;
-    use CharClass::*;
-    use CharSelector::*;
     use CommandRule::*;
     use Numerical::*;
 
@@ -1562,6 +1557,8 @@ mod display {
             "A0\"lol\""
         );
     }
+
+    #[test]
     fn append_str_del1() {
         assert_eq!(
             show_command(&InsertString(Val(0), Vec::from("lo\"l".as_bytes())), false),
