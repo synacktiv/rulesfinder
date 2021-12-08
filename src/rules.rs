@@ -381,7 +381,7 @@ fn eval_length(nm: &Numerical, env: &RuleEnv) -> u8 {
         MaxLen => 254,
         MaxLenMinus1 => 253,
         MaxLenPlus1 => 255,
-        SavedLen(uvar) => *env.userlen.get(&uvar).unwrap_or(&0),
+        SavedLen(uvar) => *env.userlen.get(uvar).unwrap_or(&0),
         WordLen => env.savedlen,
         WordLastCharPos => {
             if env.savedlen == 0 {
@@ -873,9 +873,9 @@ pub fn show_command(cmd: &CommandRule, hashcat_mode: bool) -> String {
         ReplaceWithPrior(n) => String::from(",") + show_num(n).as_str(),
         DupFirstString(n) => String::from("y") + show_num(n).as_str(),
         DupLastString(n) => String::from("Y") + show_num(n).as_str(),
-        TitleCase(cc) => String::from("E") + show_cs(cc).as_str(),
 
         // john only
+        TitleCase(cc) => String::from("E") + show_cs(cc).as_str(),
         ShiftAllKeyboardLeft => String::from("L"),
         ShiftAllKeyboardRight => String::from("R"),
         ShiftAll => String::from("S"),
@@ -936,6 +936,7 @@ fn support_commandrule(r: &CommandRule) -> ToolSupport {
         | Pluralize
         | PastTense
         | Genitive
+        | TitleCase(_)
         | MemoryAssign(_, _, _) => ToolSupport::JtR,
         _ => ToolSupport::Both,
     }
@@ -1266,7 +1267,7 @@ mod mutate {
         for cmd in commands {
             nrules.push(Rule::Command(cmd.clone()));
         }
-        let res = mutate(&ssource, &nrules);
+        let res = mutate(ssource, &nrules);
         match res {
             None => panic!("no results"),
             Some(r) => match str::from_utf8(&r) {

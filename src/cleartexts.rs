@@ -2,6 +2,7 @@ use indicatif::ProgressBar;
 use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::{self, BufRead};
+use std::path::Path;
 
 pub fn process_line(
     out: &mut HashMap<Vec<u8>, Vec<(Vec<u8>, Vec<u8>, u64)>>,
@@ -34,7 +35,7 @@ pub fn process_line(
 
 // returns a map with all the fragments, and a hashset with all the lines
 pub fn process(
-    path: &str,
+    path: &Path,
     minsize: usize,
     known: &HashSet<&Vec<u8>>,
 ) -> io::Result<(
@@ -72,7 +73,7 @@ pub fn process(
     ));
     i = 0;
     for (k, line) in &idx {
-        inserted += process_line(&mut out, *k, &line, minsize);
+        inserted += process_line(&mut out, *k, line, minsize);
         i += 1;
         if i % 2000 == 0 {
             progress.set_message(inserted.to_string().as_str());

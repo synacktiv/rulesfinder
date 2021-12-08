@@ -1,6 +1,3 @@
-extern crate clap;
-extern crate crossbeam;
-
 use std::collections::BTreeSet;
 use std::collections::HashMap;
 
@@ -14,7 +11,7 @@ pub fn worker_logic(
 ) -> HashMap<Vec<rules::Rule>, Vec<u64>> {
     let mut hits: HashMap<Vec<rules::Rule>, BTreeSet<u64>> = HashMap::new();
     for word in wordlist.iter() {
-        match rules::mutate(&word, &rules) {
+        match rules::mutate(word, &rules) {
             None => (),
             Some(mutated) => match aclear.get(&mutated) {
                 None => (),

@@ -1,24 +1,19 @@
-extern crate clap;
-extern crate crossbeam;
-#[macro_use]
-extern crate lazy_static;
-
-use clap::{App, Arg};
 use indicatif::ProgressBar;
 use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::{self, BufRead};
 use std::iter::FromIterator;
-use std::str;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::thread;
+use structopt::StructOpt;
 
 mod cleartexts;
 mod matcher;
 mod rules;
 
-lazy_static! {
+lazy_static::lazy_static! {
     static ref CONVS: rules::Converts = rules::make_converts();
 }
 
@@ -35,7 +30,7 @@ fn worker_thread(
     }
 }
 
-fn read_wordlist(wordlist: &str) -> Vec<Vec<u8>> {
+fn read_wordlist(wordlist: &Path) -> Vec<Vec<u8>> {
     let file = File::open(wordlist).unwrap();
     let rdr = io::BufReader::new(file);
     // collect all lines into a shared arc, removing those that are already known
@@ -84,99 +79,55 @@ fn sub_set(a: &[u64], b: &[u64]) -> Vec<u64> {
     o
 }
 
-fn main() {
-    let matches = App::new("rulesfinder")
-        .version("0.1")
-        .about("Finds optimal password mangling rules.")
-        .author("Synacktiv")
-        .arg(Arg::with_name("wordlist")
-            .long("wordlist")
-            .short("w")
-            .value_name("FILE")
-            .help("Training wordlist")
-            .required(true)
-            .takes_value(true))
-        .arg(Arg::with_name("cleartexts")
-            .long("cleartexts")
-            .short("p")
-            .value_name("FILE")
-            .help("Training clear text passwords")
-            .required(true)
-            .takes_value(true))
-        .arg(Arg::with_name("cutoff")
-            .long("cutoff")
-            .short("n")
-            .value_name("N")
-            .help("Minimum amount of passwords cracked for a rule to be kept")
-            .required(true)
-            .takes_value(true))
-        .arg(Arg::with_name("combinations")
-            .long("combos")
-            .short("c")
-            .value_name("N")
-            .help("Maximum number of rules comboed (warning, this number results in exponential increase in compexity)")
-            .required(false)
-            .takes_value(true))
-        .arg(Arg::with_name("threads")
-            .long("threads")
-            .short("t")
-            .value_name("N")
-            .help("Amount of threads")
-            .takes_value(true))
-        .arg(Arg::with_name("minsize")
-            .long("minsize")
-            .value_name("N")
-            .help("Minimum size of wordlists fragments (default 4)")
-            .takes_value(true))
-        .arg(Arg::with_name("hashcat")
-            .long("hashcat")
-            .help("Only use rules that work in Hashcat")
-            .takes_value(false))
-        .arg(Arg::with_name("details")
-            .long("details")
-            .help("Print statistics in the rule output")
-            .takes_value(false))
-        .get_matches();
+#[derive(Debug, StructOpt)]
+#[structopt(name = "rulesfinder", about = "Finds optimal password mangling rules.")]
+struct Options {
+    /// Training wordlist path
+    #[structopt(long = "wordlist", short = "w", parse(from_os_str))]
+    wordlist: PathBuf,
+    /// Training clear text passwords
+    #[structopt(long = "cleartexts", short = "p", parse(from_os_str))]
+    cleartexts: PathBuf,
+    /// Minimum amount of passwords cracked for a rule to be kept
+    #[structopt(long = "cutoff", short = "n", name = "LEN")]
+    cutoff: usize,
+    /// Maximum number of rules comboed (warning, this number results in exponential increase in complexity)
+    #[structopt(long = "combos", short = "c", name = "CB", default_value("1"))]
+    combinations: u64,
+    /// Amount of threads
+    #[structopt(long = "threads", short = "t", name = "THREADS", default_value("4"))]
+    threads: u64,
+    /// Minimum size of wordlists fragments
+    #[structopt(long = "minsize", name = "SIZE", default_value("4"))]
+    minsize: usize,
+    /// Only use rules taht work in Hashcat
+    #[structopt(long = "hashcat")]
+    hashcat: bool,
+    /// Print statistics in the rule output
+    #[structopt(long = "details")]
+    details: bool,
+}
 
-    let hashcat_mode = matches.is_present("hashcat");
-    let details_mode = matches.is_present("details");
+fn main() {
+    let opt = Options::from_args();
     let allrules = rules::genmutate()
         .into_iter()
         .filter(|rs| {
-            if hashcat_mode {
+            if opt.hashcat {
                 rs.iter().all(rules::hashcat_rule)
             } else {
                 rs.iter().all(rules::john_rule)
             }
         })
         .collect::<Vec<_>>();
-    let minsize = match matches.value_of("minsize") {
-        Some(ms) => ms.parse::<usize>().unwrap(),
-        None => 4,
-    };
 
-    let wordlist = matches.value_of("wordlist").unwrap();
-    let cleartexts = matches.value_of("cleartexts").unwrap();
-    let scombos = matches.value_of("combos").unwrap_or("1");
-    let combos = scombos.parse::<u64>().unwrap();
-    let cutoff = matches
-        .value_of("cutoff")
-        .unwrap()
-        .parse::<usize>()
-        .unwrap();
-    let nthreads = matches
-        .value_of("threads")
-        .unwrap_or("4")
-        .parse::<usize>()
-        .unwrap();
-
-    if combos != 1 {
+    if opt.combinations != 1 {
         panic!("combos must be 1 for now");
     }
 
-    let vwordlist = read_wordlist(wordlist);
+    let vwordlist = read_wordlist(&opt.wordlist);
     let swordlist = HashSet::from_iter(&vwordlist);
-    let (clearmap, _) = cleartexts::process(cleartexts, minsize, &swordlist).unwrap();
+    let (clearmap, _) = cleartexts::process(&opt.cleartexts, opt.minsize, &swordlist).unwrap();
 
     let arc_lines = Arc::new(vwordlist);
     let arc_clear = Arc::new(clearmap);
@@ -185,7 +136,8 @@ fn main() {
     let (send_rule, recv_rule) = crossbeam::channel::bounded(128);
     let (send_hits, recv_hits) = crossbeam::channel::bounded(128);
 
-    for _ in 0..nthreads {
+    let cutoff = opt.cutoff;
+    for _ in 0..opt.threads {
         let rcv = recv_rule.clone();
         let snd = send_hits.clone();
         let c_lines = arc_lines.clone();
@@ -220,7 +172,7 @@ fn main() {
     }
     progress.finish();
 
-    if !hashcat_mode {
+    if !opt.hashcat {
         println!("!! hashcat logic ON");
     }
 
@@ -234,13 +186,13 @@ fn main() {
         let mut to_remove: Vec<Vec<rules::Rule>> = Vec::new();
         for im in hits.iter_mut() {
             // early cutoff
-            if im.1.len() < cutoff {
+            if im.1.len() < opt.cutoff {
                 to_remove.push(im.0.clone());
                 continue;
             }
             *im.1 = sub_set(im.1, &last_set);
             // deferred cutoff
-            if im.1.len() < cutoff {
+            if im.1.len() < opt.cutoff {
                 to_remove.push(im.0.clone());
                 continue;
             }
@@ -259,20 +211,20 @@ fn main() {
         if best_count > 0 {
             total_cracked += best_count;
             // do not print the final loop, where 'hits' is empty and nothing was found!
-            if details_mode {
+            if opt.details {
                 println!(
                     "{} // [{} - {}]",
-                    rules::show_rules(&best_rules, hashcat_mode),
+                    rules::show_rules(&best_rules, opt.hashcat),
                     best_count,
                     total_cracked
                 );
             } else {
-                println!("{}", rules::show_rules(&best_rules, hashcat_mode));
+                println!("{}", rules::show_rules(&best_rules, opt.hashcat));
             }
         }
     }
 
-    if !hashcat_mode {
+    if !opt.hashcat {
         println!("!! hashcat logic OFF");
     }
 
