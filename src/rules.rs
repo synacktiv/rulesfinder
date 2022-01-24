@@ -926,6 +926,24 @@ pub fn show_command(cmd: &CommandRule, hashcat_mode: bool) -> String {
 fn support_commandrule(r: &CommandRule) -> ToolSupport {
     use CommandRule::*;
     match r {
+        Extract(Numerical::Val(_), Numerical::Val(_))
+        | Swap(Numerical::Val(_), Numerical::Val(_))
+        | ToggleCase(Numerical::Val(_))
+        | Truncate(Numerical::Val(_))
+        | DeleteAt(Numerical::Val(_))
+        | Increment(Numerical::Val(_))
+        | Decrement(Numerical::Val(_))
+        | BitshiftRight(Numerical::Val(_))
+        | BitshiftLeft(Numerical::Val(_))
+        | DupeFirstChar(Numerical::Val(_))
+        | DupeLastChar(Numerical::Val(_))
+        | ReplaceWithNext(Numerical::Val(_))
+        | ReplaceWithPrior(Numerical::Val(_))
+        | DupFirstString(Numerical::Val(_))
+        | DupLastString(Numerical::Val(_))
+        | InsertChar(Numerical::Val(_), _)
+        | Overstrike(Numerical::Val(_), _)
+        | OmitRange(Numerical::Val(_), Numerical::Val(_)) => ToolSupport::Both,
         ShiftAllKeyboardLeft
         | ShiftAllKeyboardRight
         | ShiftAll
@@ -937,6 +955,24 @@ fn support_commandrule(r: &CommandRule) -> ToolSupport {
         | PastTense
         | Genitive
         | TitleCase(_)
+        | Extract(_, _)
+        | Swap(_, _)
+        | ToggleCase(_)
+        | Truncate(_)
+        | DeleteAt(_)
+        | Increment(_)
+        | Decrement(_)
+        | BitshiftRight(_)
+        | BitshiftLeft(_)
+        | DupeFirstChar(_)
+        | DupeLastChar(_)
+        | ReplaceWithNext(_)
+        | ReplaceWithPrior(_)
+        | DupFirstString(_)
+        | DupLastString(_)
+        | OmitRange(_, _)
+        | InsertChar(_, _)
+        | Overstrike(_, _)
         | MemoryAssign(_, _, _) => ToolSupport::JtR,
         _ => ToolSupport::Both,
     }
@@ -1319,11 +1355,7 @@ mod mutate {
     }
     #[test]
     fn swap() {
-        mut_test(
-            "P@sS",
-            &[Memorize, Swap(Val(0), WordLastCharPos)],
-            "S@sP",
-        );
+        mut_test("P@sS", &[Memorize, Swap(Val(0), WordLastCharPos)], "S@sP");
     }
     #[test]
     fn increment() {
@@ -1387,11 +1419,7 @@ mod mutate {
     }
     #[test]
     fn rule_v() {
-        mut_test(
-            DEFPWD,
-            &[LowerVowelsUpperConsonants],
-            "aSQDQDF354GDRF;:;é&",
-        );
+        mut_test(DEFPWD, &[LowerVowelsUpperConsonants], "aSQDQDF354GDRF;:;é&");
     }
     #[test]
     fn shift_k_r() {
@@ -1423,11 +1451,7 @@ mod mutate {
     }
     #[test]
     fn title_case() {
-        mut_test(
-            "test word",
-            &[TitleCase(OneOf(CCWhitespace))],
-            "Test Word",
-        );
+        mut_test("test word", &[TitleCase(OneOf(CCWhitespace))], "Test Word");
     }
     #[test]
     fn toggle_case() {
@@ -1513,19 +1537,11 @@ mod mutate {
     }
     #[test]
     fn insertchar() {
-        mut_test(
-            DEFPWD,
-            &[InsertChar(Val(3), b'K')],
-            "aSQKdqdf354gdrf;:;é&",
-        );
+        mut_test(DEFPWD, &[InsertChar(Val(3), b'K')], "aSQKdqdf354gdrf;:;é&");
     }
     #[test]
     fn overstrike() {
-        mut_test(
-            DEFPWD,
-            &[Overstrike(Val(3), b'K')],
-            "aSQKqdf354gdrf;:;é&",
-        );
+        mut_test(DEFPWD, &[Overstrike(Val(3), b'K')], "aSQKqdf354gdrf;:;é&");
     }
     #[test]
     fn replace_all() {

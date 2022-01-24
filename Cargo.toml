@@ -4,6 +4,14 @@ version = "0.1.0"
 authors = ["Simon Marechal <simon.marechal@synacktiv.com>"]
 edition = "2018"
 
+[[bin]]
+name = "rulesfinder"
+path = "src/main.rs"
+
+[[bin]]
+name = "dumper"
+path = "src/dumper.rs"
+
 [dependencies]
 structopt = "0.3"
 crossbeam = "0.7.3"

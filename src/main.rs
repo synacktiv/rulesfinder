@@ -89,7 +89,7 @@ struct Options {
     #[structopt(long = "cleartexts", short = "p", parse(from_os_str))]
     cleartexts: PathBuf,
     /// Minimum amount of passwords cracked for a rule to be kept
-    #[structopt(long = "cutoff", short = "n", name = "LEN")]
+    #[structopt(long = "cutoff", short = "n", name = "LEN", default_value("50"))]
     cutoff: usize,
     /// Maximum number of rules comboed (warning, this number results in exponential increase in complexity)
     #[structopt(long = "combos", short = "c", name = "CB", default_value("1"))]
@@ -100,7 +100,7 @@ struct Options {
     /// Minimum size of wordlists fragments
     #[structopt(long = "minsize", name = "SIZE", default_value("4"))]
     minsize: usize,
-    /// Only use rules taht work in Hashcat
+    /// Only use rules that work in Hashcat
     #[structopt(long = "hashcat")]
     hashcat: bool,
     /// Print statistics in the rule output
