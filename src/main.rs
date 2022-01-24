@@ -43,8 +43,8 @@ fn read_wordlist(wordlist: &Path) -> Vec<Vec<u8>> {
 }
 
 fn shorter_rules(a: &[rules::Rule], b: &[rules::Rule]) -> bool {
-    let la = rules::show_rules(a, false).len();
-    let lb = rules::show_rules(b, false).len();
+    let la = rules::show_rules(a, false).map(|x| x.len());
+    let lb = rules::show_rules(b, false).map(|x| x.len());
     la < lb || (la == lb && a < b)
 }
 
@@ -171,10 +171,7 @@ fn main() {
         hits.extend(cur_hits);
     }
     progress.finish();
-
-    if !opt.hashcat {
-        println!("!! hashcat logic ON");
-    }
+    let mut hashcat_mode = false;
 
     // greedy coverage
     let mut last_set: Vec<u64> = Vec::new();
@@ -208,23 +205,43 @@ fn main() {
         }
         hits.remove(&best_rules);
         last_set = best_set;
+        let display = |rdesc, ttl| {
+            if opt.details {
+                println!("{} // [{} - {}]", rdesc, best_count, ttl);
+            } else {
+                println!("{}", rdesc);
+            }
+        };
         if best_count > 0 {
             total_cracked += best_count;
+            match rules::show_rules(&best_rules, hashcat_mode) {
+                Some(x) => display(x, total_cracked),
+                None => {
+                    if opt.hashcat {
+                        panic!(
+                            "should not happen : invalid rule to be displayed: {:?}",
+                            &best_rules
+                        )
+                    } else {
+                        hashcat_mode = !hashcat_mode;
+
+                        if hashcat_mode {
+                            println!("!! hashcat logic ON");
+                        } else {
+                            println!("!! hashcat logic OFF");
+                        }
+                        display(
+                            rules::show_rules(&best_rules, hashcat_mode).unwrap(),
+                            total_cracked,
+                        );
+                    }
+                }
+            };
             // do not print the final loop, where 'hits' is empty and nothing was found!
-            if opt.details {
-                println!(
-                    "{} // [{} - {}]",
-                    rules::show_rules(&best_rules, opt.hashcat),
-                    best_count,
-                    total_cracked
-                );
-            } else {
-                println!("{}", rules::show_rules(&best_rules, opt.hashcat));
-            }
         }
     }
 
-    if !opt.hashcat {
+    if hashcat_mode {
         println!("!! hashcat logic OFF");
     }
 

@@ -595,7 +595,7 @@ pub fn mutate(word: &[u8], rules: &[Rule]) -> Option<Vec<u8>> {
                     PurgeAll(cl) => cur.retain(|&c| !in_class(c, cl)),
                     DupWordNTimes(n) => {
                         let initial = cur.clone();
-                        for _ in 0..(eval_length(n, &env) - 1) {
+                        for _ in 0..(eval_length(n, &env)) {
                             cur.extend(initial.clone());
                         }
                     }
@@ -825,64 +825,76 @@ pub fn mutate(word: &[u8], rules: &[Rule]) -> Option<Vec<u8>> {
     Some(cur)
 }
 
-pub fn show_command(cmd: &CommandRule, hashcat_mode: bool) -> String {
+pub fn show_command(cmd: &CommandRule, hashcat_mode: bool) -> Option<String> {
     use CommandRule::*;
+    let hashcat_only = |s: String| if hashcat_mode { Some(s) } else { None };
+    let john_only = |s: String| if hashcat_mode { None } else { Some(s) };
     match cmd {
         // common
-        Noop => String::from(":"),
-        ToLower => String::from("l"),
-        ToUpper => String::from("u"),
-        Capitalize => String::from("c"),
-        InvertCapitalize => String::from("C"),
-        ToggleAll => String::from("t"),
-        ToggleCase(n) => String::from("T") + show_num(n).as_str(),
-        Reverse => String::from("r"),
-        Duplicate => String::from("d"),
-        DupWordNTimes(n) => String::from("p") + show_num(n).as_str(),
-        Reflect => String::from("f"),
-        RotLeft => String::from("{"),
-        RotRight => String::from("}"),
-        Append(x) => String::from("$") + show_char(*x).as_str(),
-        DeleteFirst => String::from("["),
-        DeleteLast => String::from("]"),
-        DeleteAt(n) => String::from("D") + show_num(n).as_str(),
-        Extract(n, m) => String::from("x") + show_num(n).as_str() + show_num(m).as_str(),
-        OmitRange(n, m) => String::from("O") + show_num(n).as_str() + show_num(m).as_str(),
-        InsertChar(n, c) => String::from("i") + show_num(n).as_str() + show_char(*c).as_str(),
-        Overstrike(n, c) => String::from("o") + show_num(n).as_str() + show_char(*c).as_str(),
-        Truncate(n) => String::from("'") + show_num(n).as_str(),
-        ReplaceAll(cc, c) => String::from("s") + show_cs(cc).as_str() + show_char(*c).as_str(),
-        PurgeAll(cc) => String::from("@") + show_cs(cc).as_str(),
-        DupeFirstChar(n) => String::from("z") + show_num(n).as_str(),
-        DupeLastChar(n) => String::from("Z") + show_num(n).as_str(),
-        DupeAllChar => String::from("q"),
-        ExtractInsert(n, m, o) => {
-            String::from("X") + show_num(n).as_str() + show_num(m).as_str() + show_num(o).as_str()
+        Noop => Some(String::from(":")),
+        ToLower => Some(String::from("l")),
+        ToUpper => Some(String::from("u")),
+        Capitalize => Some(String::from("c")),
+        InvertCapitalize => Some(String::from("C")),
+        ToggleAll => Some(String::from("t")),
+        ToggleCase(n) => Some(String::from("T") + show_num(n).as_str()),
+        Reverse => Some(String::from("r")),
+        Duplicate => Some(String::from("d")),
+        DupWordNTimes(n) => hashcat_only(String::from("p") + show_num(n).as_str()),
+        Reflect => Some(String::from("f")),
+        RotLeft => Some(String::from("{")),
+        RotRight => Some(String::from("}")),
+        Append(x) => Some(String::from("$") + show_char(*x).as_str()),
+        DeleteFirst => Some(if hashcat_mode {
+            String::from("[")
+        } else {
+            String::from("\\[")
+        }),
+        DeleteLast => Some(if hashcat_mode {
+            String::from("]")
+        } else {
+            String::from("\\]")
+        }),
+        DeleteAt(n) => Some(String::from("D") + show_num(n).as_str()),
+        Extract(n, m) => Some(String::from("x") + show_num(n).as_str() + show_num(m).as_str()),
+        OmitRange(n, m) => Some(String::from("O") + show_num(n).as_str() + show_num(m).as_str()),
+        InsertChar(n, c) => Some(String::from("i") + show_num(n).as_str() + show_char(*c).as_str()),
+        Overstrike(n, c) => Some(String::from("o") + show_num(n).as_str() + show_char(*c).as_str()),
+        Truncate(n) => Some(String::from("'") + show_num(n).as_str()),
+        ReplaceAll(cc, c) => {
+            Some(String::from("s") + show_cs(cc).as_str() + show_char(*c).as_str())
         }
-        AppendMemory => String::from("4"),
-        PrependMemory => String::from("6"),
-        Memorize => String::from("M"),
-        BitshiftLeft(n) => String::from("L") + show_num(n).as_str(),
-        BitshiftRight(n) => String::from("R") + show_num(n).as_str(),
-        SwapFirstTwo => String::from("k"),
-        SwapLastTwo => String::from("K"),
-        Swap(n, m) => String::from("*") + show_num(n).as_str() + show_num(m).as_str(),
-        Increment(n) => String::from("+") + show_num(n).as_str(),
-        Decrement(n) => String::from("-") + show_num(n).as_str(),
-        ReplaceWithNext(n) => String::from(".") + show_num(n).as_str(),
-        ReplaceWithPrior(n) => String::from(",") + show_num(n).as_str(),
-        DupFirstString(n) => String::from("y") + show_num(n).as_str(),
-        DupLastString(n) => String::from("Y") + show_num(n).as_str(),
+        PurgeAll(cc) => Some(String::from("@") + show_cs(cc).as_str()),
+        DupeFirstChar(n) => Some(String::from("z") + show_num(n).as_str()),
+        DupeLastChar(n) => Some(String::from("Z") + show_num(n).as_str()),
+        DupeAllChar => Some(String::from("q")),
+        ExtractInsert(n, m, o) => Some(
+            String::from("X") + show_num(n).as_str() + show_num(m).as_str() + show_num(o).as_str(),
+        ),
+        AppendMemory => Some(String::from("4")),
+        PrependMemory => Some(String::from("6")),
+        Memorize => Some(String::from("M")),
+        BitshiftLeft(n) => hashcat_only(String::from("L") + show_num(n).as_str()),
+        BitshiftRight(n) => hashcat_only(String::from("R") + show_num(n).as_str()),
+        SwapFirstTwo => hashcat_only(String::from("k")),
+        SwapLastTwo => hashcat_only(String::from("K")),
+        Swap(n, m) => hashcat_only(String::from("*") + show_num(n).as_str() + show_num(m).as_str()),
+        Increment(n) => hashcat_only(String::from("+") + show_num(n).as_str()),
+        Decrement(n) => hashcat_only(String::from("-") + show_num(n).as_str()),
+        ReplaceWithNext(n) => hashcat_only(String::from(".") + show_num(n).as_str()),
+        ReplaceWithPrior(n) => hashcat_only(String::from(",") + show_num(n).as_str()),
+        DupFirstString(n) => hashcat_only(String::from("y") + show_num(n).as_str()),
+        DupLastString(n) => hashcat_only(String::from("Y") + show_num(n).as_str()),
 
         // john only
-        TitleCase(cc) => String::from("E") + show_cs(cc).as_str(),
-        ShiftAllKeyboardLeft => String::from("L"),
-        ShiftAllKeyboardRight => String::from("R"),
-        ShiftAll => String::from("S"),
-        LowerVowelsUpperConsonants => String::from("V"),
-        ToggleShift(n) => String::from("W") + show_num(n).as_str(),
-        Prefix(x) => String::from("^") + show_char(*x).as_str(),
-        InsertString(n, s) => {
+        TitleCase(cc) => john_only(String::from("E") + show_cs(cc).as_str()),
+        ShiftAllKeyboardLeft => john_only(String::from("L")),
+        ShiftAllKeyboardRight => john_only(String::from("R")),
+        ShiftAll => john_only(String::from("S")),
+        LowerVowelsUpperConsonants => john_only(String::from("V")),
+        ToggleShift(n) => john_only(String::from("W") + show_num(n).as_str()),
+        Prefix(x) => john_only(String::from("^") + show_char(*x).as_str()),
+        InsertString(n, s) => Some(
             // compatibility mode for Hashcat
             if hashcat_mode {
                 let mut o = String::new();
@@ -909,17 +921,17 @@ pub fn show_command(cmd: &CommandRule, hashcat_mode: bool) -> String {
                 o
             } else {
                 String::from("A") + show_num(n).as_str() + show_string(s).as_str()
-            }
-        }
-        Pluralize => String::from("p"),
-        PastTense => String::from("P"),
-        Genitive => String::from("I"),
-        MemoryAssign(uv, n, m) => {
+            },
+        ),
+        Pluralize => john_only(String::from("p")),
+        PastTense => john_only(String::from("P")),
+        Genitive => john_only(String::from("I")),
+        MemoryAssign(uv, n, m) => Some(
             String::from("v")
                 + show_uservar(uv).as_str()
                 + show_num(n).as_str()
-                + show_num(m).as_str()
-        }
+                + show_num(m).as_str(),
+        ),
     }
 }
 
@@ -1130,28 +1142,23 @@ pub fn show_reject(rej: &RejectRule) -> String {
     }
 }
 
-pub fn show_rule(rule: &Rule, hashcat_mode: bool) -> String {
+pub fn show_rule(rule: &Rule, hashcat_mode: bool) -> Option<String> {
     match rule {
         Rule::Command(cmd) => show_command(cmd, hashcat_mode),
-        Rule::Reject(rej) => show_reject(rej),
+        Rule::Reject(rej) => Some(show_reject(rej)),
     }
 }
 
-pub fn show_rules(rules: &[Rule], hashcat_mode: bool) -> String {
-    let mut o = String::new();
-    for rule in rules {
-        o += show_rule(rule, hashcat_mode).as_str();
-    }
-    o
+pub fn show_rules(rules: &[Rule], hashcat_mode: bool) -> Option<String> {
+    rules.iter().map(|r| show_rule(r, hashcat_mode)).collect()
 }
 
 #[allow(dead_code)]
-pub fn show_commands(rules: &[CommandRule], hashcat_mode: bool) -> String {
-    let mut o = String::new();
-    for rule in rules {
-        o += show_command(rule, hashcat_mode).as_str();
-    }
-    o
+pub fn show_commands(rules: &[CommandRule], hashcat_mode: bool) -> Option<String> {
+    rules
+        .iter()
+        .map(|r| show_command(r, hashcat_mode))
+        .collect()
 }
 
 pub fn genmutate() -> Vec<Vec<Rule>> {
@@ -1335,7 +1342,7 @@ mod mutate {
     }
     #[test]
     fn dup_word_n_times() {
-        mut_test("P@ss", &[DupWordNTimes(Val(3))], "P@ssP@ssP@ss");
+        mut_test("P@ss", &[DupWordNTimes(Val(2))], "P@ssP@ssP@ss");
     }
     #[test]
     fn bitshift_right() {
@@ -1571,7 +1578,7 @@ mod display {
     fn append_str() {
         assert_eq!(
             show_command(&InsertString(Val(0), Vec::from("lol".as_bytes())), false),
-            "A0\"lol\""
+            Some("A0\"lol\"".to_string())
         );
     }
 
@@ -1579,7 +1586,7 @@ mod display {
     fn append_str_del1() {
         assert_eq!(
             show_command(&InsertString(Val(0), Vec::from("lo\"l".as_bytes())), false),
-            "A0'lo\"l'"
+            Some("A0'lo\"l'".to_string())
         );
     }
 }
