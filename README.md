@@ -35,19 +35,14 @@ A long form article can be [read here](https://www.synacktiv.com/posts/tool/rule
 All measurements have been conducted on my laptop while I am doing something else with it.
 *These measurements are just here to illustrate what you should expect with regards to resource usage.*
 
-All measurements have been conducted using a cleartext database of 1642068 passwords, and a parallelism level of 7.
+Memory usage for the first phase
 
-| Dictionary size | Minimum substring size | Cutoff | Memory usage | Run time | Rules found | Estimated passwords cracked |
-|:---------------:|------------------------|--------|--------------|----------|-------------|-----------------------------|
-| 3559            | 5                      | 20     | 5.5GB        | 63s      | 1520        | 106610                      |
-| 3559            | 4                      | 20     | 7.6GB        | 156s     | 2002        | 131752                      |
-| 3559            | 5                      | 100    | 5.5GB        | 32s      | 257         | 58207                       |
-| 3559            | 3                      | 100    | 14.7GB       | 128s     | 303         | 70026                       |
-| 12645           | 5                      | 100    | 5.9GB        | 56s      | 486         | 143838                      |
-| 102774 `[1]` | 5                      | 100    | 6GB          | 89s      | 464         | 135873                      |
-| 303872          | 5                      | 100    | 7.5GB        | 346s     | 889         | 361561                      |
-
-`[1]`: this is an outlier, because I used a generic spellchecking dictionary instead of something meant for password cracking.
+| Cleartext size | Cleartext words | minsize=3 | minsize=4 | minsize=5 | minsize=6 |
+|:--------------:|-----------------|-----------|-----------|-----------|-----------|
+| 11.264 MB      | 1M words        | 3767MB    | 3245MB    | 2732MB    | 2255MB    |
+| 16.9 MB        | 1.5M words      | 7365MB    | 6262MB    | 5273MB    | 4742MB    |
+| 22.528 MB      | 2M words        | 9263MB    | 5273MB    | 6518MB    | 5389MB    |
+| 42.848 MB      | 3.8M words      | 14347MB   | 4742MB    | 10529MB   | 8885MB    |
 
 The processing is two parts:
 
@@ -63,7 +58,7 @@ Increasing this value mindlessly will be counter productive, as it will lead to:
 
 As a rule of thumb, I recommend:
 
- * having a a minimum substring size of 4 or 5 ;
+ * having a a minimum substring size of 4 or 5, note that memory usage for the first phase is mostly linear with the size of the plaintext corpus ;
  * only using real passwords in the cleartext corpus ;
  * using dictionaries you will actually use during a cracking session. That means short dictionaries for rules you will use against hard hashes, and long dictionaries for rules you will use against fast hashes.
 
