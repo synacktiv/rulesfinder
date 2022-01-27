@@ -1,3 +1,4 @@
+use crate::cleartexts::CleartextMap;
 use indicatif::ProgressBar;
 use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
@@ -21,7 +22,7 @@ fn worker_thread(
     r: crossbeam::channel::Receiver<Vec<rules::Rule>>,
     s: crossbeam::channel::Sender<HashMap<Vec<rules::Rule>, Vec<u64>>>,
     alines: Arc<Vec<Vec<u8>>>,
-    aclear: Arc<HashMap<Vec<u8>, Vec<(Vec<u8>, Vec<u8>, u64)>>>,
+    aclear: Arc<CleartextMap>,
     cutoff: usize,
 ) {
     while let Ok(rules) = r.recv() {
@@ -106,6 +107,9 @@ struct Options {
     /// Print statistics in the rule output
     #[structopt(long = "details")]
     details: bool,
+    /// Preallocate memory for fragments : should be faster but might be wasteful
+    #[structopt(long = "preallocate")]
+    preallocate: bool,
 }
 
 fn main() {
@@ -127,7 +131,8 @@ fn main() {
 
     let vwordlist = read_wordlist(&opt.wordlist);
     let swordlist = HashSet::from_iter(&vwordlist);
-    let (clearmap, _) = cleartexts::process(&opt.cleartexts, opt.minsize, &swordlist).unwrap();
+    let (clearmap, _) =
+        cleartexts::process(opt.preallocate, &opt.cleartexts, opt.minsize, &swordlist).unwrap();
 
     let arc_lines = Arc::new(vwordlist);
     let arc_clear = Arc::new(clearmap);
@@ -230,10 +235,10 @@ fn main() {
                         } else {
                             println!("!! hashcat logic OFF");
                         }
-                        display(
-                            rules::show_rules(&best_rules, hashcat_mode).unwrap(),
-                            total_cracked,
-                        );
+                        match rules::show_rules(&best_rules, hashcat_mode) {
+                                Some(r ) => display(r, total_cracked),
+                                None => panic!("This rule is invalid with JtR & hashcat : {:?}", best_rules)
+                        }
                     }
                 }
             };

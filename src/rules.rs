@@ -893,7 +893,7 @@ pub fn show_command(cmd: &CommandRule, hashcat_mode: bool) -> Option<String> {
         ShiftAll => john_only(String::from("S")),
         LowerVowelsUpperConsonants => john_only(String::from("V")),
         ToggleShift(n) => john_only(String::from("W") + show_num(n).as_str()),
-        Prefix(x) => john_only(String::from("^") + show_char(*x).as_str()),
+        Prefix(x) => Some(String::from("^") + show_char(*x).as_str()),
         InsertString(n, s) => Some(
             // compatibility mode for Hashcat
             if hashcat_mode {

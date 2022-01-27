@@ -1,3 +1,5 @@
+use crate::cleartexts::CleartextMap;
+use smallvec::ToSmallVec;
 use std::collections::BTreeSet;
 use std::collections::HashMap;
 
@@ -6,14 +8,14 @@ use crate::rules;
 pub fn worker_logic(
     rules: Vec<rules::Rule>,
     wordlist: &[Vec<u8>],
-    aclear: &HashMap<Vec<u8>, Vec<(Vec<u8>, Vec<u8>, u64)>>,
+    aclear: &CleartextMap,
     cutoff: usize,
 ) -> HashMap<Vec<rules::Rule>, Vec<u64>> {
     let mut hits: HashMap<Vec<rules::Rule>, BTreeSet<u64>> = HashMap::new();
     for word in wordlist.iter() {
         match rules::mutate(word, &rules) {
             None => (),
-            Some(mutated) => match aclear.get(&mutated) {
+            Some(mutated) => match aclear.get(&mutated.to_smallvec()) {
                 None => (),
                 Some(matches) => {
                     for (prefix, suffix, nth) in matches {
@@ -25,14 +27,14 @@ pub fn worker_logic(
                             if prefix.len() == 1 {
                                 currule.push(Command(Prefix(prefix[0])));
                             } else {
-                                currule.push(Command(InsertString(Val(0), prefix.clone())));
+                                currule.push(Command(InsertString(Val(0), prefix.to_vec())));
                             }
                         }
                         if !suffix.is_empty() {
                             if suffix.len() == 1 {
                                 currule.push(Command(Append(suffix[0])));
                             } else {
-                                currule.push(Command(InsertString(Infinite, suffix.clone())));
+                                currule.push(Command(InsertString(Infinite, suffix.to_vec())));
                             }
                         }
                         hits.entry(currule)
@@ -50,7 +52,7 @@ pub fn worker_logic(
         };
     }
     hits.retain(|_, st| st.len() >= cutoff);
-    let mut res : HashMap<Vec<rules::Rule>, Vec<u64>> = HashMap::new();
+    let mut res: HashMap<Vec<rules::Rule>, Vec<u64>> = HashMap::new();
     for (k, st) in &hits {
         let mut v = Vec::new();
         for e in st {

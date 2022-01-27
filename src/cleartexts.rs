@@ -1,31 +1,32 @@
 use indicatif::ProgressBar;
+use smallvec::SmallVec;
+use smallvec::ToSmallVec;
 use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::{self, BufRead};
 use std::path::Path;
 
-pub fn process_line(
-    out: &mut HashMap<Vec<u8>, Vec<(Vec<u8>, Vec<u8>, u64)>>,
-    nth: u64,
-    line: &[u8],
-    minsize: usize,
-) -> usize {
+pub type CleartextInfo = (SmallVec<[u8; 16]>, SmallVec<[u8; 16]>, u64);
+
+pub type CleartextMap = HashMap<SmallVec<[u8; 16]>, Vec<CleartextInfo>>;
+
+pub fn process_line(out: &mut CleartextMap, nth: u64, line: &[u8], minsize: usize) -> usize {
     let ln = line.len();
     let mut inserted = 0;
     for start in 0..1 + ln - minsize {
         let maxwidth = 1 + ln - start;
         for sz in minsize..maxwidth {
-            let middle = line[start..start + sz].to_vec();
+            let middle = line[start..start + sz].to_smallvec();
             inserted += 1;
             out.entry(middle)
-                .and_modify(|x: &mut Vec<(Vec<u8>, Vec<u8>, u64)>| {
-                    let lstart = line[0..start].to_vec();
-                    let ending = line[start + sz..].to_vec();
+                .and_modify(|x: &mut Vec<CleartextInfo>| {
+                    let lstart = line[0..start].to_smallvec();
+                    let ending = line[start + sz..].to_smallvec();
                     x.push((lstart, ending, nth));
                 })
                 .or_insert({
-                    let lstart = line[0..start].to_vec();
-                    let ending = line[start + sz..].to_vec();
+                    let lstart = line[0..start].to_smallvec();
+                    let ending = line[start + sz..].to_smallvec();
                     vec![(lstart, ending, nth)]
                 });
         }
@@ -35,13 +36,11 @@ pub fn process_line(
 
 // returns a map with all the fragments, and a hashset with all the lines
 pub fn process(
+    preallocate: bool,
     path: &Path,
     minsize: usize,
     known: &HashSet<&Vec<u8>>,
-) -> io::Result<(
-    HashMap<Vec<u8>, Vec<(Vec<u8>, Vec<u8>, u64)>>,
-    HashMap<u64, Vec<u8>>,
-)> {
+) -> io::Result<(CleartextMap, HashMap<u64, Vec<u8>>)> {
     let mut idx = HashMap::new();
 
     let file = File::open(path)?;
@@ -58,15 +57,19 @@ pub fn process(
         }
         idx.insert(i, line);
         i += 1;
-        for l in minsize..=llen {
-            expected_size += llen + 1 - l;
-        }
+        let tta = 1 + llen - minsize;
+        expected_size += (tta + 1) * tta / 2;
     }
 
     // TODO : there is a saturation of low length hashes that can be computed statistically
     // this will reserve way too much space here, but it is not too bad, as this is nothing
     // compared to what's inside the map ...
-    let mut out = HashMap::with_capacity(expected_size * 7 / 10);
+
+    let mut out = if preallocate {
+        HashMap::with_capacity(expected_size * 7 / 10)
+    } else {
+        HashMap::new()
+    };
     let progress = ProgressBar::new(i);
     progress.set_style(indicatif::ProgressStyle::default_bar().template(
         "[ETA: {eta_precise}] {bar:60.cyan/blue} {pos}/{len} - {msg} fragments inserted",
@@ -106,7 +109,7 @@ mod tests {
             ("DEF", ("ABC", "")),
         ];
         for (k, _tpl) in expected {
-            let kv: Vec<u8> = k.as_bytes().to_vec();
+            let kv: SmallVec<[u8; 16]> = k.as_bytes().to_smallvec();
             match out.get(&kv) {
                 None => panic!("Could not find match {}", k),
                 Some(_) => {}
