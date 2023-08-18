@@ -176,7 +176,7 @@ fn main() {
         hits.extend(cur_hits);
     }
     progress.finish();
-    let mut hashcat_mode = false;
+    let mut hashcat_mode = opt.hashcat;
 
     // greedy coverage
     let mut last_set: Vec<u64> = Vec::new();
@@ -223,9 +223,9 @@ fn main() {
                 Some(x) => display(x, total_cracked),
                 None => {
                     if opt.hashcat {
-                        panic!(
-                            "should not happen : invalid rule to be displayed: {:?}",
-                            &best_rules
+                        unreachable!(
+                            "should not happen : invalid rule to be displayed: {:?} hashcat_mode={}",
+                            &best_rules, hashcat_mode
                         )
                     } else {
                         hashcat_mode = !hashcat_mode;
@@ -236,8 +236,10 @@ fn main() {
                             println!("!! hashcat logic OFF");
                         }
                         match rules::show_rules(&best_rules, hashcat_mode) {
-                                Some(r ) => display(r, total_cracked),
-                                None => panic!("This rule is invalid with JtR & hashcat : {:?}", best_rules)
+                            Some(r) => display(r, total_cracked),
+                            None => {
+                                panic!("This rule is invalid with JtR & hashcat : {:?}", best_rules)
+                            }
                         }
                     }
                 }
@@ -246,7 +248,7 @@ fn main() {
         }
     }
 
-    if hashcat_mode {
+    if hashcat_mode && !opt.hashcat {
         println!("!! hashcat logic OFF");
     }
 
