@@ -1272,7 +1272,9 @@ pub fn genmutate() -> Vec<Vec<Rule>> {
         out.push(vec![Command(DupLastString(n.clone()))]);
         for m in numericals.iter() {
             out.push(vec![Command(Extract(n.clone(), m.clone()))]);
-            out.push(vec![Command(Swap(n.clone(), m.clone()))]);
+            if m != n {
+                out.push(vec![Command(Swap(n.clone(), m.clone()))]);
+            }
             out.push(vec![Command(OmitRange(n.clone(), m.clone()))]);
         }
         for c in CONV_SOURCE.as_bytes().iter() {
