@@ -1268,8 +1268,10 @@ pub fn genmutate() -> Vec<Vec<Rule>> {
         out.push(vec![Command(DupeLastChar(n.clone()))]);
         out.push(vec![Command(ReplaceWithNext(n.clone()))]);
         out.push(vec![Command(ReplaceWithPrior(n.clone()))]);
-        out.push(vec![Command(DupFirstString(n.clone()))]);
-        out.push(vec![Command(DupLastString(n.clone()))]);
+        if n != &Numerical::Val(0) {
+            out.push(vec![Command(DupFirstString(n.clone()))]);
+            out.push(vec![Command(DupLastString(n.clone()))]);
+        }
         for m in numericals.iter() {
             out.push(vec![Command(Extract(n.clone(), m.clone()))]);
             if m != n {
